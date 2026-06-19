@@ -346,6 +346,38 @@
       .modal-ft{font-size:20px}.modal-tname{font-size:19px}.flag-img-lg{width:44px;height:30px}
       .modal-score-area{gap:.3rem}.vbtn{font-size:8px}
     }
+    /* ── MOBIL BUNNMENY ── */
+    #mobNav{display:none}
+    @media(max-width:767px){
+      .view-nav{display:none}
+      body{padding-bottom:64px}
+      #mobNav{
+        display:flex;position:fixed;bottom:0;left:0;right:0;z-index:600;
+        background:#0a1208;
+        border-top:2px solid #e8be4a;
+        box-shadow:0 -3px 0 #6e4a16,0 -6px 0 rgba(0,0,0,.4);
+        padding-bottom:env(safe-area-inset-bottom)
+      }
+      .mob-tab{
+        flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+        padding:6px 1px 8px;gap:3px;
+        font-family:'Press Start 2P',monospace;font-size:5.5px;letter-spacing:.02em;
+        color:rgba(244,236,200,.35);background:none;border:none;cursor:pointer;position:relative
+      }
+      .mob-icon{font-size:18px;line-height:1;filter:grayscale(.6) brightness(.65);transition:filter .2s}
+      .mob-tab.mob-active{color:#f6d45a}
+      .mob-tab.mob-active .mob-icon{filter:none}
+      @keyframes mob-pulse{
+        0%,100%{background:rgba(232,190,74,.04)}
+        50%{background:rgba(232,190,74,.15)}
+      }
+      .mob-tab.mob-active{animation:mob-pulse 2.6s ease-in-out infinite}
+      .mob-tab.mob-active::after{
+        content:'';position:absolute;bottom:3px;
+        width:20px;height:2px;background:#f6d45a;
+        box-shadow:0 0 5px rgba(246,212,90,.7)
+      }
+    }
   </style>
 </head>
 <body class="z-fire">
@@ -430,6 +462,14 @@
   </footer>
 </div>
 
+<nav id="mobNav" aria-label="Mobilmeny">
+  <button class="mob-tab mob-active" data-view="forside"><span class="mob-icon">⚽</span><span>HJEM</span></button>
+  <button class="mob-tab" data-view="kampprogram"><span class="mob-icon">📋</span><span>KAMP</span></button>
+  <button class="mob-tab" data-view="kalender"><span class="mob-icon">📅</span><span>KAL.</span></button>
+  <button class="mob-tab" data-view="grupper"><span class="mob-icon">🏟</span><span>GRUPPE</span></button>
+  <button class="mob-tab" data-view="sluttspill"><span class="mob-icon">🏆</span><span>SLUTT</span></button>
+  <button class="mob-tab" data-view="statistikk"><span class="mob-icon">⭐</span><span>TOPP</span></button>
+</nav>
 <script src="swos-players.js"></script>
 <script>
 const DATA_URL='https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
@@ -1020,6 +1060,7 @@ function showView(view){
   document.getElementById('groupBar').style.display=inK?'flex':'none';
   document.getElementById('zoomBar').style.display=inC?'flex':'none';
   document.querySelectorAll('.vbtn').forEach(b=>b.className=`vbtn ${b.dataset.view===view?'on-'+view:'off'}`);
+  document.querySelectorAll('.mob-tab').forEach(b=>b.classList.toggle('mob-active',b.dataset.view===view));
   document.getElementById('v'+view.charAt(0).toUpperCase()+view.slice(1)).style.display=inC?'flex':'block';
   if(view==='forside')renderForside();
   else if(view==='kampprogram')renderKampprogram();
@@ -1031,6 +1072,7 @@ function showView(view){
 
 /* ══ EVENT HANDLERS ══ */
 document.querySelector('.view-nav').addEventListener('click',e=>{const b=e.target.closest('.vbtn');if(b)showView(b.dataset.view)});
+document.getElementById('mobNav').addEventListener('click',e=>{const b=e.target.closest('.mob-tab');if(b)showView(b.dataset.view)});
 document.getElementById('statusBar').addEventListener('click',e=>{
   const b=e.target.closest('[data-st]');if(!b)return;
   currentStatus=b.dataset.st;
