@@ -1,0 +1,15 @@
+﻿SensibleSoccer/
+*.xlsx
+wc2026-players.json
+page.js
+vmkal.css
+font1.woff2
+font2.woff2
+build_players_from_excel.js
+gen_kit_sprites.js
+check_kits.js
+debug_socks.js
+update_player_skin_hair.js
+fill_skin_hair.ps1
+node_modules/
+.DS_Store
