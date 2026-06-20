@@ -285,7 +285,7 @@
     /* Outer positions head; inner clips transparent sprite area */
     .swos-sprite-outer{position:relative;width:30px;height:35px;flex-shrink:0}
     .swos-sprite-wrap{position:relative;width:30px;height:35px;overflow:hidden}
-    .swos-head-ovl{position:absolute;top:1px;left:50%;transform:translateX(calc(-50% - 2px));width:21px;height:21px;image-rendering:pixelated;display:block}
+    .swos-head-ovl{position:absolute;top:2px;left:50%;transform:translateX(calc(-50% - 2px));width:21px;height:21px;image-rendering:pixelated;display:block}
     /* Team card single-col squad list (SWOS style) */
     .swos-squad-panel{background:rgba(0,8,40,.55);border:1px solid rgba(90,120,200,.25);padding:.4rem .5rem;margin-top:.35rem}
     .swos-squad-list{display:flex;flex-direction:column;gap:0}
@@ -377,6 +377,16 @@
     .stat-lbl{position:relative;z-index:1;font-size:13px;color:rgba(244,236,200,.75);text-align:center;width:100%;white-space:nowrap}
     /* ── MOBIL BUNNMENY ── */
     #mobNav{display:none}
+    #refreshBtn{display:none}
+    @media(max-width:767px){
+      #refreshBtn{
+        display:block;position:fixed;top:env(safe-area-inset-top,0);right:0;z-index:700;
+        background:rgba(17,30,14,.82);border:none;border-bottom-left-radius:6px;
+        color:rgba(244,236,200,.55);font-size:18px;padding:6px 10px;cursor:pointer;
+        line-height:1;backdrop-filter:blur(4px)
+      }
+      #refreshBtn:active{color:#f6d45a}
+    }
     @media(max-width:767px){
       .view-nav{display:none}
       body{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
@@ -495,6 +505,7 @@
   </footer>
 </div>
 
+<button id="refreshBtn" title="Oppdater" onclick="localStorage.clear();location.reload()">⟳</button>
 <nav id="mobNav" aria-label="Mobilmeny">
   <button class="mob-tab mob-active" data-view="forside"><span class="mob-icon">⚽</span><span>FORSIDE</span></button>
   <button class="mob-tab" data-view="kampprogram"><span class="mob-icon">📋</span><span>KAMPER</span></button>
