@@ -299,6 +299,8 @@
     .swos-sb.a.has{background:#2e6329;color:#c6e8c2;border-color:#4a8a3c}
     .swos-sb.r{background:rgba(246,212,90,.08);color:rgba(246,212,90,.45);border-color:rgba(232,190,74,.18)}
     .swos-sb.r.has{background:rgba(246,212,90,.25);color:#f6d45a;border-color:#e8be4a}
+    .swos-sb.yc.has{background:#b89018;color:#1a1000;border-color:#f6d45a}
+    .swos-sb.rc.has{background:#b02020;color:#fff;border-color:#f04040}
     .swos-goal-badge{font-family:'Press Start 2P',monospace;font-size:8px;
       background:#c06000;color:#fff;padding:.1rem .28rem;border:1px solid #f08020;
       margin-top:.05rem;display:inline-block}
@@ -349,6 +351,28 @@
       .modal-ft{font-size:20px}.modal-tname{font-size:19px}.flag-img-lg{width:44px;height:30px}
       .modal-score-area{gap:.3rem}.vbtn{font-size:8px}
     }
+    /* ── LIVE KAMP ── */
+    .live-panel{margin-bottom:1rem;border-color:#c03030}
+    .live-panel .group-header{color:#f04040;border-color:#c03030;display:flex;align-items:center;gap:.5rem}
+    .live-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#f03030;flex-shrink:0;animation:live-pulse 1.1s ease-in-out infinite}
+    @keyframes live-pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(240,48,48,.6)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(240,48,48,0)}}
+    .live-card{padding:.5rem .7rem;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;transition:background .15s}
+    .live-card:last-child{border-bottom:none}
+    .live-card:hover{background:rgba(255,255,255,.05)}
+    .live-min{font-family:'VT323',monospace;font-size:15px;color:#f06060;margin-bottom:.2rem}
+    .live-score-row{display:flex;align-items:center;gap:.4rem}
+    .live-team{display:flex;align-items:center;gap:.3rem;flex:1;font-family:'VT323',monospace;font-size:18px;overflow:hidden}
+    .live-team.right{justify-content:flex-end;flex-direction:row-reverse}
+    .live-score{font-family:'VT323',monospace;font-size:26px;color:#f4ecc8;min-width:3.5rem;text-align:center;flex-shrink:0}
+    /* ── KAMPSTATISTIKK ── */
+    .stats-grid{padding:.4rem .2rem .5rem}
+    .stat-row{display:grid;grid-template-columns:2.2rem 1fr 2.2rem;align-items:center;gap:.35rem;margin-bottom:.38rem;font-family:'VT323',monospace;font-size:16px}
+    .stat-val-l{text-align:right;color:#f4ecc8}
+    .stat-val-r{text-align:left;color:#f4ecc8}
+    .stat-bar-wrap{position:relative;height:14px;background:rgba(255,255,255,.08);border-radius:2px;display:flex;align-items:center;overflow:hidden}
+    .stat-bar-l{position:absolute;left:0;top:0;height:100%;background:#4c8fcb;opacity:.75;transition:width .4s}
+    .stat-bar-r{position:absolute;right:0;top:0;height:100%;background:#e8be4a;opacity:.75;transition:width .4s}
+    .stat-lbl{position:relative;z-index:1;font-size:13px;color:rgba(244,236,200,.75);text-align:center;width:100%;white-space:nowrap}
     /* ── MOBIL BUNNMENY ── */
     #mobNav{display:none}
     @media(max-width:767px){
@@ -482,6 +506,201 @@
 const DATA_URL='https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
 const SDB_BASE='https://www.thesportsdb.com/api/v1/json/3';
 
+/* ── API-FOOTBALL ── */
+const APIF_KEY='014f445f9190e2bf05b27b6e3bb705cd';
+const APIF_URL='https://v3.football.api-sports.io';
+// Name differences between API-Football and openfootball
+const APIF_TEAM={'USA':'United States','Bosnia-Herzegovina':'Bosnia & Herzegovina',
+  "Cote d'Ivoire":'Ivory Coast','Democratic Republic of Congo':'DR Congo',
+  'Korea Republic':'South Korea','Republic of Ireland':'Ireland',
+  'Trinidad and Tobago':'Trinidad & Tobago'};
+function apifTeam(n){return APIF_TEAM[n]||n}
+function cacheGet(key,ttl){try{const r=localStorage.getItem(key);if(!r)return null;const o=JSON.parse(r);return Date.now()-o.ts<ttl?o.d:null}catch{return null}}
+function cacheSet(key,d){try{localStorage.setItem(key,JSON.stringify({ts:Date.now(),d}))}catch{}}
+
+async function enhanceWithAPIFootball(){
+  let list=cacheGet('apif_fx',60*60*1000); // 1h cache
+  if(!list){
+    try{
+      const r=await fetch(`${APIF_URL}/fixtures?league=1&season=2026`,{headers:{'x-apisports-key':APIF_KEY}});
+      if(!r.ok)return;
+      const j=await r.json();if(!j.response?.length)return;
+      list=j.response.map(f=>({
+        id:f.fixture.id,date:f.fixture.date.slice(0,10),
+        st:f.fixture.status.short,
+        home:f.teams.home.name,away:f.teams.away.name,
+        gh:f.goals.home,ga:f.goals.away,
+        hth:f.score.halftime.home,hta:f.score.halftime.away
+      }));
+      cacheSet('apif_fx',list);
+    }catch{return}
+  }
+  let updated=false;
+  for(const f of list){
+    if(!['FT','AET','PEN'].includes(f.st)||f.gh===null)continue;
+    const ah=apifTeam(f.home),aa=apifTeam(f.away);
+    const m=allMatches.find(m=>m.date===f.date&&
+      ((m.team1===ah&&m.team2===aa)||(m.team1===aa&&m.team2===ah)));
+    if(!m)continue;
+    const t1home=m.team1===ah;
+    const nft=t1home?[f.gh,f.ga]:[f.ga,f.gh];
+    if(!m.score?.ft||m.score.ft[0]!==nft[0]||m.score.ft[1]!==nft[1]){
+      m.score=m.score||{};m.score.ft=nft;
+      if(f.hth!==null)m.score.ht=t1home?[f.hth,f.hta]:[f.hta,f.hth];
+      updated=true;
+    }
+    if(!m._apifId)m._apifId=f.id;
+  }
+  if(updated){computeGoals();computeAssists();showView(currentView)}
+}
+
+async function fetchApifEvents(fxId,m,midx){
+  const ttl=m.score?.ft?Number.MAX_SAFE_INTEGER:60*60*1000; // permanent for finished, 1h for ongoing
+  let evs=cacheGet('apif_ev_'+fxId,ttl);
+  if(!evs){
+    try{
+      const r=await fetch(`${APIF_URL}/fixtures/events?fixture=${fxId}`,{headers:{'x-apisports-key':APIF_KEY}});
+      if(!r.ok)return;
+      const j=await r.json();evs=j.response||[];
+      cacheSet('apif_ev_'+fxId,evs);
+    }catch{return}
+  }
+  const g1=[],g2=[];
+  for(const e of evs){
+    if(e.type!=='Goal')continue;
+    const og=e.detail==='Own Goal';
+    const nm=e.player.name||'?';
+    const min=String(e.time.elapsed+(e.time.extra||0));
+    const sc=apifTeam(e.team.name);
+    if(og){if(sc===m.team2)g1.push({name:nm,minute:min,owngoal:true});else g2.push({name:nm,minute:min,owngoal:true})}
+    else{if(sc===m.team1)g1.push({name:nm,minute:min,owngoal:false});else g2.push({name:nm,minute:min,owngoal:false})}
+  }
+  if(!m.goals1?.length)m.goals1=g1;
+  if(!m.goals2?.length)m.goals2=g2;
+  if(currentModalIdx!==midx)return;
+  const evSect=document.querySelector('#modalContent .ev-section');
+  if(evSect)evSect.outerHTML=buildEventsHTML(m);
+  computeGoals();computeAssists();
+}
+
+async function fetchMatchStats(fxId,m,midx){
+  const ttl=m.score?.ft?Number.MAX_SAFE_INTEGER:60*60*1000; // permanent for finished, 1h for ongoing
+  let stats=cacheGet('apif_st_'+fxId,ttl);
+  if(!stats){
+    try{
+      const r=await fetch(`${APIF_URL}/fixtures/statistics?fixture=${fxId}`,{headers:{'x-apisports-key':APIF_KEY}});
+      if(!r.ok)return;
+      const j=await r.json();stats=j.response||[];
+      if(stats.length)cacheSet('apif_st_'+fxId,stats);
+    }catch{return}
+  }
+  if(!stats.length||currentModalIdx!==midx)return;
+  const[s1,s2]=stats;if(!s1||!s2)return;
+  const t1home=apifTeam(s1.team.name)===m.team1;
+  const st1=t1home?s1.statistics:s2.statistics;
+  const st2=t1home?s2.statistics:s1.statistics;
+  function gv(arr,type){const s=arr.find(x=>x.type===type);return s?.value??null}
+  const rows=[
+    {l:'Ballbesittelse',k:'Ball Possession',pct:true},
+    {l:'Skudd på mål',k:'Shots on Goal'},
+    {l:'Totalt skudd',k:'Total Shots'},
+    {l:'Corner',k:'Corner Kicks'},
+    {l:'Frispark',k:'Fouls'},
+    {l:'Offsider',k:'Offsides'},
+    {l:'Gule kort',k:'Yellow Cards'},
+  ];
+  let html='<div class="ev-section"><div class="ev-hdr">Kampstatistikk</div><div class="stats-grid">';
+  for(const row of rows){
+    let v1=gv(st1,row.k),v2=gv(st2,row.k);
+    if(v1===null&&v2===null)continue;
+    v1=v1??0;v2=v2??0;
+    let p1,p2;
+    if(row.pct){p1=parseFloat(v1)||50;p2=100-p1}
+    else{const tot=(+v1||0)+(+v2||0);p1=tot?Math.round(100*(+v1||0)/tot):50;p2=100-p1}
+    html+=`<div class="stat-row">
+      <span class="stat-val-l">${v1}</span>
+      <div class="stat-bar-wrap">
+        <div class="stat-bar-l" style="width:${p1}%"></div>
+        <span class="stat-lbl">${row.l}</span>
+        <div class="stat-bar-r" style="width:${p2}%"></div>
+      </div>
+      <span class="stat-val-r">${v2}</span>
+    </div>`;
+  }
+  html+='</div></div>';
+  const el=document.getElementById('modal-stats-sect');
+  if(el)el.innerHTML=html;
+}
+
+async function fetchLiveMatches(){
+  try{
+    const r=await fetch(`${APIF_URL}/fixtures?league=1&season=2026&live=all`,{headers:{'x-apisports-key':APIF_KEY}});
+    if(!r.ok)return;
+    const j=await r.json();
+    const prev=JSON.stringify(liveMatches.map(f=>f.fixture.id+':'+f.goals.home+'-'+f.goals.away));
+    liveMatches=j.response||[];
+    const curr=JSON.stringify(liveMatches.map(f=>f.fixture.id+':'+f.goals.home+'-'+f.goals.away));
+    // Attach apifId to allMatches for live entries
+    for(const f of liveMatches){
+      const ah=apifTeam(f.teams.home.name),aa=apifTeam(f.teams.away.name);
+      const m=allMatches.find(m=>(m.team1===ah&&m.team2===aa)||(m.team1===aa&&m.team2===ah));
+      if(m&&!m._apifId)m._apifId=f.fixture.id;
+    }
+    if(prev!==curr&&currentView==='forside')renderForside();
+  }catch{}
+}
+
+function getApifId(m){
+  if(m._apifId)return m._apifId;
+  const list=cacheGet('apif_fx',60*60*1000);
+  if(!list)return null;
+  const f=list.find(f=>{
+    const fh=apifTeam(f.home),fa=apifTeam(f.away);
+    return f.date===m.date&&((fh===m.team1&&fa===m.team2)||(fh===m.team2&&fa===m.team1));
+  });
+  if(f){m._apifId=f.id;return f.id}
+  return null;
+}
+
+function startLivePolling(){
+  if(liveInterval)return;
+  const now=Date.now();
+  const relevant=allMatches.some(m=>{
+    const dt=parseDT(m.date,m.time);
+    if(!dt)return false;
+    const diff=dt.getTime()-now;
+    return diff>-4*3600*1000&&diff<4*3600*1000;
+  });
+  if(!relevant)return;
+  fetchLiveMatches();
+  liveInterval=setInterval(fetchLiveMatches,5*60*1000); // every 5 min (budget-friendly)
+}
+
+function buildLiveHTML(){
+  if(!liveMatches.length)return'';
+  let html='<div class="pixel-panel live-panel" style="margin-bottom:1rem"><div class="group-header"><span class="live-dot"></span>LIVE NÅ</div>';
+  for(const f of liveMatches){
+    const ah=apifTeam(f.teams.home.name),aa=apifTeam(f.teams.away.name);
+    const gh=f.goals.home??'–',ga=f.goals.away??'–';
+    const st=f.fixture.status;
+    const minLbl=st.short==='HT'?'HT':st.elapsed?(st.elapsed+(st.extra?'+'+st.extra:''))+"'":'';
+    const m=allMatches.find(m=>(m.team1===ah&&m.team2===aa)||(m.team1===aa&&m.team2===ah));
+    const idx=m?allMatches.indexOf(m):-1;
+    const t1home=m?.team1===ah;
+    const sc1=t1home?gh:ga,sc2=t1home?ga:gh;
+    const t1=m?.team1||ah,t2=m?.team2||aa;
+    html+=`<div class="live-card" onclick="${idx>=0?`openModal(${idx})`:''}" style="${idx<0?'cursor:default':''}">
+      <div class="live-min">${minLbl}</div>
+      <div class="live-score-row">
+        <div class="live-team">${flagEl(t1,'sm')}<span>${tn(t1)}</span></div>
+        <div class="live-score">${sc1} – ${sc2}</div>
+        <div class="live-team right">${flagEl(t2,'sm')}<span>${tn(t2)}</span></div>
+      </div>
+    </div>`;
+  }
+  return html+'</div>';
+}
+
 /* ── LOOKUPS ── */
 const FLAG_FILE={
   'Mexico':'mx','South Africa':'za','South Korea':'kr','Czech Republic':'cz','Canada':'ca',
@@ -543,7 +762,7 @@ const ZCFG={
 };
 
 /* ── STATE ── */
-let allMatches=[],currentView='forside',currentStatus='idag',currentGroup='alle',currentZoom='fire',currentModalIdx=-1;
+let allMatches=[],liveMatches=[],liveInterval=null,currentView='forside',currentStatus='idag',currentGroup='alle',currentZoom='fire',currentModalIdx=-1;
 
 /* ── HELPERS ── */
 function tn(t){return TEAM_NO[t]||t||'?'}
@@ -772,7 +991,7 @@ function openModal(idx){
       </div>
     </div>
     ${evHtml}
-    ${fin?`<div id="modal-sdb-sect" class="sdb-loading"><span class="ldots">Henter kampdata</span></div>`:''}`;
+    ${fin?`<div id="modal-stats-sect"></div><div id="modal-sdb-sect" class="sdb-loading"><span class="ldots">Henter kampdata</span></div>`:''}`;
 
   document.getElementById('matchModal').style.zIndex='510';
   document.getElementById('teamModal').style.zIndex='502';
@@ -789,6 +1008,12 @@ function openModal(idx){
       const el=document.getElementById('modal-sdb-sect');
       if(el)el.outerHTML='';
     });
+    // Fetch goal events and stats from API-Football
+    const apifId=getApifId(m);
+    if(apifId){
+      if(!(m.goals1?.length||m.goals2?.length))fetchApifEvents(apifId,m,idx);
+      fetchMatchStats(apifId,m,idx);
+    }
   }
 }
 function closeModal(){
@@ -822,8 +1047,30 @@ function buildNorwayHTML(){
 /* ══ RENDER: FORSIDE ══ */
 function renderForside(){
   const el=document.getElementById('vForside');
+  const byTime=(a,b)=>{const da=parseDT(a.date,a.time),db=parseDT(b.date,b.time);return(da?da.getTime():0)-(db?db.getTime():0)};
 
-  /* Heia Norge */
+  /* Live */
+  const liveHtml=buildLiveHTML();
+
+  /* Filter out live match IDs from upcoming/finished to avoid dupes */
+  const liveIds=new Set(liveMatches.map(f=>f.fixture.id));
+  const notLive=allMatches.filter(m=>!m._apifId||!liveIds.has(m._apifId));
+
+  /* Next 3 upcoming */
+  const next3=notLive.filter(m=>!m.score?.ft).sort(byTime).slice(0,3);
+  /* Last 3 finished */
+  const last3=notLive.filter(m=>m.score?.ft).sort(byTime).slice(-3).reverse();
+
+  const nextHtml=`<div class="pixel-panel" style="margin-bottom:1rem">
+    <div class="group-header">Neste kamper</div>
+    <div style="padding:.3rem .4rem .05rem">${next3.length?next3.map(m=>matchCardHtml(m)).join(''):'<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen kommende kamper</p>'}</div>
+  </div>`;
+
+  const lastHtml=`<div class="pixel-panel" style="margin-bottom:1rem">
+    <div class="group-header">Siste kamper</div>
+    <div style="padding:.3rem .4rem .05rem">${last3.length?last3.map(m=>matchCardHtml(m)).join(''):'<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen ferdige kamper ennå</p>'}</div>
+  </div>`;
+
   const norgeHtml=`<div class="pixel-panel" style="margin-bottom:1rem">
     <div class="group-header" style="display:flex;align-items:center;gap:.5rem">
       <img src="flags/no.png" alt="" class="flag-img-sm"> HEIA NORGE! — GRUPPE I <img src="flags/no.png" alt="" class="flag-img-sm">
@@ -831,26 +1078,7 @@ function renderForside(){
     <div style="padding:.55rem .65rem"><div class="norge-grid">${buildNorwayHTML()}</div></div>
   </div>`;
 
-  /* Sort helpers */
-  const byTime=(a,b)=>{const da=parseDT(a.date,a.time),db=parseDT(b.date,b.time);return(da?da.getTime():0)-(db?db.getTime():0)};
-
-  /* Last 3 finished (most recent first) */
-  const last3=[...allMatches].filter(m=>m.score?.ft).sort(byTime).slice(-3).reverse();
-  /* Next 3 upcoming (nearest first) */
-  const next3=[...allMatches].filter(m=>!m.score?.ft).sort(byTime).slice(0,3);
-
-  const duoHtml=`<div class="forside-duo">
-    <div class="pixel-panel">
-      <div class="group-header">Siste kamper</div>
-      <div style="padding:.3rem .4rem .05rem">${last3.length?last3.map(m=>matchCardHtml(m)).join(''):'<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen ferdige kamper ennå</p>'}</div>
-    </div>
-    <div class="pixel-panel">
-      <div class="group-header">Neste kamper</div>
-      <div style="padding:.3rem .4rem .05rem">${next3.length?next3.map(m=>matchCardHtml(m)).join(''):'<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen kommende kamper</p>'}</div>
-    </div>
-  </div>`;
-
-  el.innerHTML=norgeHtml+duoHtml+`<div style="margin-top:1.25rem">${buildGrupperHTML()}</div>`;
+  el.innerHTML=liveHtml+nextHtml+lastHtml+norgeHtml+`<div style="margin-top:1.25rem">${buildGrupperHTML()}</div>`;
 }
 
 /* ══ RENDER: KAMPPROGRAM ══ */
@@ -1205,6 +1433,21 @@ function computeAssists(){
   playerAssists=a;
 }
 
+let playerYellow={},playerRed={};
+function computeCards(){
+  const y={},r={};
+  allMatches.forEach(m=>{
+    [...(m.cards||m.bookings||[])].forEach(c=>{
+      const name=c.name||c.player;if(!name)return;
+      const k=name.toUpperCase();
+      const type=(c.result||c.type||'').toLowerCase();
+      if(type.includes('red')){r[k]=(r[k]||0)+1}
+      else{y[k]=(y[k]||0)+1}
+    });
+  });
+  playerYellow=y;playerRed=r;
+}
+
 let playerRatings={};
 async function fetchPlayerRatings(){
   try{
@@ -1261,6 +1504,9 @@ function statLookup(dict,fullName){
 function swosSquadRow(p,num,teamName){
   const pc={GK:'swos-pos-GK',DEF:'swos-pos-DEF',MID:'swos-pos-MID',FWD:'swos-pos-FWD'};
   const g=statLookup(playerGoals,p.n);
+  const a=statLookup(playerAssists,p.n);
+  const yc=statLookup(playerYellow,p.n);
+  const rc=statLookup(playerRed,p.n);
   const rat=playerRatings[p.n]||null;
   const skin=p.skin||'Light';
   const hair=p.hair||'Black';
@@ -1269,8 +1515,14 @@ function swosSquadRow(p,num,teamName){
   const fb=getKitSprite('Light','DEFAULT');
   const hc=`sprites/head-${headShape}-skin${skin}-hair${hair}.png`;
   const sprite=`<div class="swos-sprite-wrap"><img class="swos-char-sm" src="${sp}" onerror="if(!this._f){this._f=1;this.src='${fb}'}" alt=""><img class="swos-head-ovl" src="${hc}" alt=""></div>`;
-  const statHtml=`<span class="swos-sb g${g?' has':''}">${g?'⚽ '+g:'⚽ 0'}</span>${rat?`<span class="swos-sb r has">★ ${rat}</span>`:''}`;
-  return`<div class="swos-squad-row">${sprite}<span class="swos-row-num">${num}</span><span class="swos-pos ${pc[p.p]||''}">${p.p}</span><span class="swos-row-name">${swosDisplayName(p.n)}</span><div class="swos-stat-grp">${statHtml}</div></div>`;
+  const badges=[
+    g?`<span class="swos-sb g has">⚽ ${g}</span>`:'',
+    a?`<span class="swos-sb a has">A ${a}</span>`:'',
+    yc?`<span class="swos-sb yc has">Y ${yc}</span>`:'',
+    rc?`<span class="swos-sb rc has">R ${rc}</span>`:'',
+    rat?`<span class="swos-sb r has">★ ${rat}</span>`:'',
+  ].filter(Boolean).join('');
+  return`<div class="swos-squad-row">${sprite}<span class="swos-row-num">${num}</span><span class="swos-pos ${pc[p.p]||''}">${p.p}</span><span class="swos-row-name">${swosDisplayName(p.n)}</span><div class="swos-stat-grp">${badges}</div></div>`;
 }
 
 function openTeamModal(name){
@@ -1335,10 +1587,12 @@ async function loadData(){
     const res=await fetch(DATA_URL);
     if(!res.ok)throw new Error();
     const data=await res.json();allMatches=data.matches||[];
-    computeGoals();computeAssists();
+    computeGoals();computeAssists();computeCards();
     document.getElementById('loading').style.display='none';
     showView('forside');
     fetchPlayerRatings(); // non-blocking — fills in ratings when SofaScore responds
+    enhanceWithAPIFootball(); // non-blocking — overlays live results from API-Football
+    startLivePolling(); // non-blocking — polls live scores every 5 min when matches are on
   }catch{
     document.getElementById('loading').style.display='none';
     document.getElementById('errbox').style.display='block';
