@@ -2,7 +2,7 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VM-Kampprogram 2026</title>
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
@@ -20,8 +20,7 @@
     button,[data-midx],[data-team],[data-st],[data-view]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     table{border-collapse:collapse}:root{color-scheme:dark}
     body{font-family:'VT323',ui-monospace,monospace;background:#056cc3;color:#f4ecc8;
-      -webkit-font-smoothing:antialiased;font-size:21px;line-height:1.35;min-height:100vh;
-      padding-top:env(safe-area-inset-top)}
+      -webkit-font-smoothing:antialiased;font-size:21px;line-height:1.35;min-height:100vh}
     .stadium-bg{position:fixed;top:-50px;right:0;bottom:0;left:0;z-index:-2;background:#056cc3 url('stadium.png') top/cover no-repeat;image-rendering:pixelated}
     .stadium-overlay{position:fixed;inset:0;z-index:-1;
       background:radial-gradient(120% 60% at 50% 0,rgba(246,212,90,.12),transparent 55%),
@@ -94,6 +93,10 @@
     header{padding:2.25rem 0 1.25rem;text-align:center}
     .trophy-img{image-rendering:pixelated;width:auto;height:120px;margin:0 auto .7rem;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
     .header-sub{font-size:18px;color:rgba(244,236,200,.7);margin-top:.6rem}
+    #subHeader{display:none;align-items:center;gap:.6rem;padding:.8rem 0 .5rem}
+    #subHeader img{height:32px;width:auto;image-rendering:pixelated;filter:drop-shadow(0 3px 0 rgba(0,0,0,.4))}
+    #subHeader h2{font-family:'Press Start 2P',monospace;font-size:clamp(.75rem,3.5vw,1.15rem);color:#f6d45a;text-shadow:2px 2px 0 rgba(0,0,0,.55);line-height:1.2}
+    @media(max-width:480px){#subHeader img{height:26px}#subHeader h2{font-size:clamp(.65rem,3vw,1rem)}}
 
     /* Heia Norge */
     .norge-section{margin-top:1.5rem}.norge-grid{display:grid;gap:.6rem}
@@ -459,9 +462,13 @@
       <span style="font-family:'Press Start 2P',monospace;color:#f6d45a;font-size:9px;letter-spacing:.1em;text-shadow:2px 2px 0 rgba(0,0,0,.55)">VM 2026</span>
       <img src="flags/no.png" alt="Norge" class="flag-img-sm">
     </div>
-    <h1 class="logo-text" style="font-size:clamp(1.05rem,4vw,2.3rem)">VM-KAMPPROGRAM</h1>
+    <h1 class="logo-text" style="font-size:clamp(1.05rem,4vw,2.3rem)">VM-OVERSIKT</h1>
     <p class="header-sub">Canada · Mexico · USA &nbsp;·&nbsp; Tider i norsk tid (CEST)</p>
   </header>
+  <div id="subHeader">
+    <img src="trophy.png" alt="">
+    <h2 id="subHeaderTitle"></h2>
+  </div>
 
   <div class="view-nav">
     <button class="vbtn on-forside" data-view="forside">🏠 Forside</button>
@@ -509,6 +516,7 @@
     Data: <a href="https://wcup2026.org" target="_blank">wcup2026.org</a>
     &nbsp;·&nbsp; Kamprapporter: <a href="https://www.thesportsdb.com" target="_blank">TheSportsDB</a>
     &nbsp;·&nbsp; * Kamper 00–07 vises dagen før i kalender
+    &nbsp;·&nbsp; Laget av Orion
   </footer>
 </div>
 
@@ -538,9 +546,10 @@ function mapWCMatch(raw){
     const p=scoreRaw.trim().split(/\s+/).map(Number);
     if(p.length===2&&!isNaN(p[0])&&!isNaN(p[1]))ft=p;
   }
-  const d=new Date(raw.datetime*1000);
-  const time=`${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')} UTC+0`;
-  return{_wcId:raw.id,date:raw.date,time,team1:raw.team1,team2:raw.team2,
+  const d=raw.datetime?new Date(raw.datetime*1000):null;
+  const utcDate=d?`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`:(raw.date||'');
+  const time=d?`${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')} UTC+0`:'';
+  return{_wcId:raw.id,date:utcDate,time,team1:raw.team1,team2:raw.team2,
     group:raw.group||null,round:raw.round||null,ground:raw.ground||null,
     status:raw.status,live_minute:raw.live_minute||null,score:ft?{ft}:null};
 }
@@ -774,6 +783,11 @@ function fmtTime(dt){return dt?dt.toLocaleTimeString('nb-NO',{hour:'2-digit',min
 function fmtLong(dt){return dt?cap(dt.toLocaleDateString('nb-NO',{weekday:'long',day:'numeric',month:'long',timeZone:'Europe/Oslo'})):'?'}
 function fmtShort(dt){return dt?dt.toLocaleDateString('nb-NO',{day:'numeric',month:'short',timeZone:'Europe/Oslo'}):'?'}
 function todayStr(){return new Date().toLocaleString('sv-SE',{timeZone:'Europe/Oslo'}).slice(0,10)}
+function calToday(){
+  const now=new Date(),h=osloHour(now);
+  if(h!==null&&h<7){const d=new Date(now);d.setDate(d.getDate()-1);return d.toLocaleString('sv-SE',{timeZone:'Europe/Oslo'}).slice(0,10)}
+  return todayStr()
+}
 function calDate(m){
   const dt=parseDT(m.date,m.time);
   if(!dt)return m.date||'';
@@ -781,7 +795,7 @@ function calDate(m){
   if(h!==null&&h<7){const p=new Date(d+'T12:00:00');p.setDate(p.getDate()-1);return p.toISOString().slice(0,10)}
   return d||m.date||'';
 }
-function isMatchToday(m){return calDate(m)===todayStr()}
+function isMatchToday(m){return calDate(m)===calToday()}
 
 /* ── FILTERS ── */
 function applyFilters(matches){
@@ -1380,13 +1394,18 @@ function renderStatistikk(){
 }
 
 /* ══ VIEW SWITCHING ══ */
+const VIEW_TITLES={kampprogram:'KAMPPROGRAM',kalender:'KALENDER',grupper:'GRUPPER',sluttspill:'SLUTTSPILL',statistikk:'TOPPSCORER'};
 function showView(view){
   currentView=view;
   ['vForside','vKampprogram','vKalender','vGrupper','vSluttspill','vStatistikk'].forEach(id=>document.getElementById(id).style.display='none');
-  const inK=view==='kampprogram',inC=view==='kalender';
+  const inK=view==='kampprogram',inC=view==='kalender',inF=view==='forside';
   document.getElementById('statusBar').style.display=inK?'flex':'none';
   document.getElementById('groupBar').style.display=inK?'flex':'none';
   document.getElementById('zoomBar').style.display=inC?'flex':'none';
+  document.querySelector('header').style.display=inF?'':'none';
+  const sub=document.getElementById('subHeader');
+  sub.style.display=inF?'none':'flex';
+  if(!inF)document.getElementById('subHeaderTitle').textContent=VIEW_TITLES[view]||view.toUpperCase();
   document.querySelectorAll('.vbtn').forEach(b=>b.className=`vbtn ${b.dataset.view===view?'on-'+view:'off'}`);
   document.querySelectorAll('.mob-tab').forEach(b=>b.classList.toggle('mob-active',b.dataset.view===view));
   document.getElementById('v'+view.charAt(0).toUpperCase()+view.slice(1)).style.display=inC?'flex':'block';
