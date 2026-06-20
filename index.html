@@ -94,9 +94,9 @@
     .trophy-img{image-rendering:pixelated;width:auto;height:120px;margin:0 auto .7rem;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
     .header-sub{font-size:18px;color:rgba(244,236,200,.7);margin-top:.6rem}
     #subHeader{display:none;align-items:center;gap:.6rem;padding:.8rem 0 .5rem}
-    #subHeader img{height:32px;width:auto;image-rendering:pixelated;filter:drop-shadow(0 3px 0 rgba(0,0,0,.4))}
-    #subHeader h2{font-family:'Press Start 2P',monospace;font-size:clamp(.75rem,3.5vw,1.15rem);color:#f6d45a;text-shadow:2px 2px 0 rgba(0,0,0,.55);line-height:1.2}
-    @media(max-width:480px){#subHeader img{height:26px}#subHeader h2{font-size:clamp(.65rem,3vw,1rem)}}
+    #subHeader img{height:52px;width:auto;image-rendering:pixelated;filter:drop-shadow(0 3px 0 rgba(0,0,0,.4))}
+    #subHeader h2{font-family:'Press Start 2P',monospace;font-size:clamp(1.05rem,4vw,2.3rem);color:#f6d45a;text-shadow:2px 2px 0 rgba(0,0,0,.55);line-height:1.2}
+    @media(max-width:480px){#subHeader img{height:40px}}
 
     /* Heia Norge */
     .norge-section{margin-top:1.5rem}.norge-grid{display:grid;gap:.6rem}
@@ -265,7 +265,7 @@
     .br-row:first-child{border-top:none}
     .br-row.winner{background:rgba(246,212,90,.1)}
     .br-name{font-size:18px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(244,236,200,.85)}
-    .br-name.no{color:#f6d45a} .br-name.dim{color:rgba(244,236,200,.35)}
+    .br-name.no{color:#f6d45a} .br-name.dim{color:rgba(244,236,200,.35)} .br-name.proj{color:rgba(244,236,200,.55);font-style:italic}
     .br-score{font-family:'Press Start 2P',monospace;font-size:12px;min-width:14px;text-align:right;color:rgba(244,236,200,.6)}
     .br-score.w{color:#5ae05a}
     .br-meta{font-size:15px;color:rgba(244,236,200,.35);padding:2px 7px;border-top:1px solid rgba(232,190,74,.08);text-align:center}
@@ -1208,27 +1208,32 @@ function mbrCard(m,idx){
   const w1=sc&&sc[0]>sc[1],w2=sc&&sc[1]>sc[0];
   function row(t,sv,win){
     const ph=isPH(t);
-    const fl=(!ph&&FLAG_FILE[t])?`<img src="flags/${FLAG_FILE[t]}.png" style="width:16px;height:11px;flex-shrink:0;image-rendering:pixelated" alt="">`:`<span style="width:16px;height:11px;background:rgba(255,255,255,.12);display:inline-block;flex-shrink:0"></span>`;
+    const proj=ph?projectedKoTeam(t):null;
+    const disp=proj||t;
+    const fl=FLAG_FILE[disp]
+      ?`<img src="flags/${FLAG_FILE[disp]}.png" style="width:16px;height:11px;flex-shrink:0;image-rendering:pixelated${proj?';opacity:.55':''}" alt="">`
+      :`<span style="width:16px;height:11px;background:rgba(255,255,255,.12);display:inline-block;flex-shrink:0"></span>`;
     const score=sc!==undefined&&!ph?`<span class="mbr-sc${win?' mbr-sw':''}">${sv}</span>`:'';
     return`<div class="mbr-row${win?' mbr-win':''}">${fl}${score}</div>`;
   }
-  return`<div class="mbr-card${t1==='Norway'||t2==='Norway'?' mbr-nor':''}" id="mbr${idx}" data-midx="${idx}">
+  const isNo=t1==='Norway'||t2==='Norway'||projectedKoTeam(t1)==='Norway'||projectedKoTeam(t2)==='Norway';
+  return`<div class="mbr-card${isNo?' mbr-nor':''}" id="mbr${idx}" data-midx="${idx}">
     ${row(t1,sc?sc[0]:'-',w1)}${row(t2,sc?sc[1]:'-',w2)}</div>`;
 }
-function mbrCol(arr,si,BH){
-  return`<div class="mob-col" style="height:${BH}px">${arr.map((m,i)=>mbrCard(m,si+i)).join('')}</div>`;
+function mbrCol(arr,BH){
+  return`<div class="mob-col" style="height:${BH}px">${arr.map(m=>mbrCard(m,midxOf(m))).join('')}</div>`;
 }
 function buildMobileBracket(gc,r32,r16,qf,sf,tp,fin){
   const BH=560;
   const lft=`<div class="mob-half" style="height:${BH}px">
-    ${mbrCol(r32.slice(0,8),gc,BH)}${mbrCol(r16.slice(0,4),gc+16,BH)}
-    ${mbrCol(qf.slice(0,2),gc+24,BH)}${mbrCol(sf.slice(0,1),gc+28,BH)}</div>`;
+    ${mbrCol(r32.slice(0,8),BH)}${mbrCol(r16.slice(0,4),BH)}
+    ${mbrCol(qf.slice(0,2),BH)}${mbrCol(sf.slice(0,1),BH)}</div>`;
   const ctr=`<div class="mob-center" style="height:${BH}px">
-    <img src="trophy.png" style="width:44px;height:44px;image-rendering:pixelated;object-fit:contain" alt="trophy">${mbrCard(fin,gc+31)}
+    <img src="trophy.png" style="width:44px;height:44px;image-rendering:pixelated;object-fit:contain" alt="trophy">${mbrCard(fin,fin?midxOf(fin):gc+31)}
     <div class="mob-fin-lbl">FINALE</div></div>`;
   const rgt=`<div class="mob-half" style="height:${BH}px">
-    ${mbrCol(sf.slice(1,2),gc+29,BH)}${mbrCol(qf.slice(2,4),gc+26,BH)}
-    ${mbrCol(r16.slice(4,8),gc+20,BH)}${mbrCol(r32.slice(8,16),gc+8,BH)}</div>`;
+    ${mbrCol(sf.slice(1,2),BH)}${mbrCol(qf.slice(2,4),BH)}
+    ${mbrCol(r16.slice(4,8),BH)}${mbrCol(r32.slice(8,16),BH)}</div>`;
   const brz=tp?`<div class="mob-bronze-hdr">🥉 BRONSEFINALE</div><div style="max-width:260px;margin:0 auto">${matchCardHtml(tp)}</div>`:'';
   return`<div class="mob-bracket-inner" id="mbInner" style="height:${BH}px">${lft}${ctr}${rgt}</div>${brz}`;
 }
@@ -1280,32 +1285,48 @@ function drawMobileSVG(){
   inner.appendChild(sv);
 }
 
-function parseTRef(r){if(!r)return'TBD';const wm=r.match(/^W(\d+)$/);if(wm)return`V.K${wm[1]}`;const gm=r.match(/^(\d+)([A-L])$/);if(gm)return`${gm[1]}.Gr${gm[2]}`;return tn(r)}
+function parseTRef(r){if(!r)return'TBD';const wm=r.match(/^W(\d+)$/);if(wm)return`V.K${wm[1]}`;const gm=r.match(/^(\d+)([A-L])$/);if(gm)return`${gm[1]}.Gr${gm[2]}`;const tm=r.match(/^3([A-L]{2,})$/);if(tm)return`3.pl(${tm[1]})`;return tn(r)}
 function isPH(r){return!r||!!r.match(/^[WL\d]/)}
+function projectedKoTeam(ref){
+  if(!ref||!isPH(ref))return null;
+  const gm=ref.match(/^(\d+)([A-L])$/);
+  if(!gm)return null;
+  const rank=parseInt(gm[1]),st=calcStandings(`Group ${gm[2]}`);
+  if(st.length>=rank&&st[rank-1].gp>0)return st[rank-1].n;
+  return null;
+}
+function midxOf(m){return allMatches.findIndex(x=>x._wcId===m._wcId)}
 function brCard(m,idx){
   if(!m)return`<div class="br-card" id="bm${idx}" data-midx="${idx}"><div class="br-row"><span class="br-name dim">TBD</span></div><div class="br-row"><span class="br-name dim">TBD</span></div></div>`;
   const t1=m.team1||'?',t2=m.team2||'?',sc=m.score?.ft,dt=parseDT(m.date,m.time);
   function row(t,score,win){
-    const ph=isPH(t),c=FLAG_FILE[t];
-    const fi=(!ph&&c)?`<img src="flags/${c}.png" alt="" class="flag-img-xs" loading="lazy">`:`<span style="display:inline-block;width:20px;height:14px;background:rgba(0,0,0,.2);flex-shrink:0"></span>`;
-    return`<div class="br-row${win?' winner':''}">${fi}<span class="br-name${t==='Norway'?' no':''}${ph?' dim':''}">${ph?parseTRef(t):tn(t)}</span>${sc!==undefined?`<span class="br-score${win?' w':''}">${score}</span>`:''}</div>`;
+    const ph=isPH(t);
+    const proj=ph?projectedKoTeam(t):null;
+    const disp=proj||t;
+    const c=FLAG_FILE[disp];
+    const fi=c?`<img src="flags/${c}.png" alt="" class="flag-img-xs" loading="lazy"${proj?' style="opacity:.55"':''}>`:
+      `<span style="display:inline-block;width:20px;height:14px;background:rgba(0,0,0,.2);flex-shrink:0"></span>`;
+    const label=proj?tn(proj):ph?parseTRef(t):tn(t);
+    const cls=`br-name${disp==='Norway'?' no':''}${(ph&&!proj)?' dim':''}${proj?' proj':''}`;
+    return`<div class="br-row${win?' winner':''}">${fi}<span class="${cls}">${label}</span>${sc!==undefined?`<span class="br-score${win?' w':''}">${score}</span>`:''}</div>`;
   }
   const w1=sc&&sc[0]>sc[1],w2=sc&&sc[1]>sc[0];
-  return`<div class="br-card${t1==='Norway'||t2==='Norway'?' nc':''}" id="bm${idx}" data-midx="${idx}">
+  const isNo=t1==='Norway'||t2==='Norway'||(projectedKoTeam(t1)==='Norway'||projectedKoTeam(t2)==='Norway');
+  return`<div class="br-card${isNo?' nc':''}" id="bm${idx}" data-midx="${idx}">
     ${row(t1,sc?sc[0]:'-',w1)}${row(t2,sc?sc[1]:'-',w2)}
     <div class="br-meta">${dt?`${fmtShort(dt)} ${fmtTime(dt)}`:'TBD'}</div>
   </div>`;
 }
 function renderSluttspill(){
   const el=document.getElementById('vSluttspill');
-  const gc=allMatches.filter(m=>m.group).length;
-  const ko=allMatches.filter(m=>!m.group);
+  const ko=allMatches.filter(m=>!m.group).sort((a,b)=>a._wcId-b._wcId);
   if(!ko.length){el.innerHTML=`<div style="text-align:center;padding:3rem;color:rgba(244,236,200,.4);font-size:17px">Sluttspillet starter etter gruppespillet.</div>`;return}
-  const r32=allMatches.slice(gc,gc+16),r16=allMatches.slice(gc+16,gc+24),qf=allMatches.slice(gc+24,gc+28),sf=allMatches.slice(gc+28,gc+30),tp=allMatches[gc+30],fin=allMatches[gc+31];
+  const r32=ko.slice(0,16),r16=ko.slice(16,24),qf=ko.slice(24,28),sf=ko.slice(28,30),tp=ko[30],fin=ko[31];
+  const gc=allMatches.filter(m=>m.group).length;
   const BH=1120;
-  function mkCol(id,lbl,arr,si){return`<div class="br-col" style="height:${BH}px"><div class="br-col-hdr">${lbl}</div><div class="br-col-body" style="height:${BH-32}px">${arr.map((m,i)=>brCard(m,si+i)).join('')}</div></div>`}
+  function mkCol(id,lbl,arr){return`<div class="br-col" style="height:${BH}px"><div class="br-col-hdr">${lbl}</div><div class="br-col-body" style="height:${BH-32}px">${arr.map(m=>brCard(m,midxOf(m))).join('')}</div></div>`}
   const gap=`<div class="br-gap" style="height:${BH}px"></div>`;
-  const cols=[mkCol('r32','RUNDE 32',r32,gc),gap,mkCol('r16','RUNDE 16',r16,gc+16),gap,mkCol('qf','KF',qf,gc+24),gap,mkCol('sf','SF',sf,gc+28),gap,mkCol('fin','🏆 FINALE',fin?[fin]:[],gc+31)].join('');
+  const cols=[mkCol('r32','RUNDE 32',r32),gap,mkCol('r16','RUNDE 16',r16),gap,mkCol('qf','KF',qf),gap,mkCol('sf','SF',sf),gap,mkCol('fin','🏆 FINALE',fin?[fin]:[])].join('');
   let listHtml='<div class="bracket-list-fallback">';
   ROUND_ORDER.forEach(rk=>{const rm=ko.filter(m=>m.round===rk||m.round===rk+'s');if(!rm.length)return;listHtml+=`<div style="margin-bottom:.9rem"><div class="group-header" style="font-size:9px;text-align:center">${ROUND_NO[rk]||rk}</div>`;rm.forEach(m=>listHtml+=matchCardHtml(m));listHtml+=`</div>`;});
   listHtml+='</div>';
@@ -1365,11 +1386,9 @@ function renderStatistikk(){
   let rows='';
   scorers.forEach(([name,g],i)=>{
     const team=playerTeam[name]||wcScorerTeams[name]||null;
-    const balls='⚽'.repeat(Math.min(g,10))+(g>10?`+${g-10}`:'');
     rows+=`<tr${i===0?' style="background:rgba(246,212,90,.08)"':''}>
       <td class="td-pos ${i<3?'q':''}" style="font-size:16px">${i+1}</td>
       <td><div style="display:flex;align-items:center;gap:.4rem">${team?flagEl(team,'sm'):''}<span style="font-size:24px">${name}</span></div></td>
-      <td style="text-align:right;padding-right:.4rem"><span style="font-size:20px;letter-spacing:.05em">${balls}</span></td>
       <td class="td-pts" style="font-size:16px">${g}</td>
     </tr>`;
   });
