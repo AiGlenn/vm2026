@@ -280,10 +280,10 @@
     .swos-pos-MID{color:#f6d45a;border-color:#e8be4a;background:rgba(246,212,90,.12)}
     .swos-pos-FWD{color:#f08020;border-color:#c06000;background:rgba(240,128,32,.15)}
     /* Player sprites — pre-generated PNG files per team×head type */
-    .swos-char{width:64px;height:88px;flex-shrink:0;image-rendering:pixelated;display:block;object-fit:contain}
+    .swos-char{width:48px;height:56px;flex-shrink:0;image-rendering:pixelated;display:block;object-fit:none;object-position:left top}
     .swos-char-sm{width:40px;height:55px;flex-shrink:0;image-rendering:pixelated;display:block;object-fit:contain}
-    .swos-sprite-wrap{position:relative;width:40px;height:55px;flex-shrink:0}
-    .swos-head-ovl{position:absolute;top:-2px;left:50%;transform:translateX(calc(-50% - 5px));width:21px;height:21px;image-rendering:pixelated;display:block}
+    .swos-sprite-wrap{position:relative;width:30px;height:35px;flex-shrink:0;overflow:hidden}
+    .swos-head-ovl{position:absolute;top:-2px;left:50%;transform:translateX(-50%);width:21px;height:21px;image-rendering:pixelated;display:block}
     /* Team card single-col squad list (SWOS style) */
     .swos-squad-panel{background:rgba(0,8,40,.55);border:1px solid rgba(90,120,200,.25);padding:.4rem .5rem;margin-top:.35rem}
     .swos-squad-list{display:flex;flex-direction:column;gap:0}
@@ -584,12 +584,12 @@ async function fetchWCScorers(){
       if(scorers.length)cacheSet('wc_scorers',scorers);
     }catch{return}
   }
+  wcScorers={};
   for(const s of scorers){
     if(!s.name||!s.goals)continue;
-    const k=s.name.toUpperCase();
-    if((playerGoals[k]||0)<s.goals)playerGoals[k]=s.goals;
+    wcScorers[s.name.toUpperCase()]=s.goals;
   }
-  statLookup._cache=null;
+  computeGoals();
   if(currentView==='statistikk')showView('statistikk');
 }
 
@@ -1241,7 +1241,7 @@ function showView(view){
 
 /* ══ EVENT HANDLERS ══ */
 document.querySelector('.view-nav').addEventListener('click',e=>{const b=e.target.closest('.vbtn');if(b)showView(b.dataset.view)});
-document.getElementById('mobNav').addEventListener('click',e=>{const b=e.target.closest('.mob-tab');if(b)showView(b.dataset.view)});
+document.getElementById('mobNav').addEventListener('click',e=>{const b=e.target.closest('.mob-tab');if(b){closeModal();closeTeamModal();showView(b.dataset.view)}});
 document.getElementById('statusBar').addEventListener('click',e=>{
   const b=e.target.closest('[data-st]');if(!b)return;
   currentStatus=b.dataset.st;
@@ -1337,7 +1337,7 @@ function getKitSprite(skin,teamName){
 }
 
 /* ══ PLAYER STATS ══ */
-let playerGoals={};
+let playerGoals={},wcScorers={};
 function computeGoals(){
   const g={};
   allMatches.forEach(m=>{
@@ -1347,8 +1347,12 @@ function computeGoals(){
       g[k]=(g[k]||0)+1;
     });
   });
+  // Merge scorer API data — take maximum to avoid resetting API-sourced counts
+  for(const[k,v] of Object.entries(wcScorers)){
+    if((g[k]||0)<v)g[k]=v;
+  }
   playerGoals=g;
-  statLookup._cache=null; // invalidate lookup cache
+  statLookup._cache=null;
 }
 
 let playerAssists={};
@@ -1536,6 +1540,19 @@ async function loadData(){
   }
 }
 loadData();
+
+/* ── Pull-to-refresh for PWA ── */
+(function(){
+  let startY=0,pulling=false;
+  document.addEventListener('touchstart',e=>{if(window.scrollY===0)startY=e.touches[0].clientY},{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(startY>0&&window.scrollY===0&&e.touches[0].clientY-startY>80)pulling=true;
+  },{passive:true});
+  document.addEventListener('touchend',()=>{
+    if(pulling){pulling=false;startY=0;localStorage.clear();location.reload();}
+    startY=0;
+  });
+})();
 </script>
 </body>
 </html>
