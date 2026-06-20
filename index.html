@@ -793,20 +793,31 @@ function applyFilters(matches){
   return matches;
 }
 
+function isLive(m){
+  return liveMatches.some(lm=>lm._wcId===m._wcId)||
+    (m.status&&!LIVE_DEAD.has((m.status||'').toLowerCase())&&!m.score?.ft);
+}
 /* ── MATCH CARD HTML ── */
 function matchCardHtml(m){
   const idx=allMatches.indexOf(m),dt=parseDT(m.date,m.time);
   const isN=m.team1==='Norway'||m.team2==='Norway',isKO=!m.group;
   const sc=m.score?.ft,t1=m.team1||'?',t2=m.team2||'?';
   const lbl=m.group?(GROUP_NO[m.group]||m.group):(ROUND_NO[m.round]||m.round||'');
-  const fin=!!sc,tod=!fin&&isMatchToday(m);
+  const live=isLive(m),fin=!!sc&&!live,tod=!fin&&!live&&isMatchToday(m);
+  const minRaw=m.live_minute||(m.status==='HT'?'HT':(!LIVE_DEAD.has((m.status||'').toLowerCase())?m.status:''));
+  const minStr=minRaw?`${minRaw}${/^\d+$/.test(String(minRaw))?"'":''}`:' ';
+  const ctr=live
+    ?`<div class="ms">${sc?sc[0]:'–'}&thinsp;–&thinsp;${sc?sc[1]:'–'}</div><div class="mm" style="color:#f06060">${minStr}</div>`
+    :sc
+      ?`<div class="ms">${sc[0]}&thinsp;–&thinsp;${sc[1]}</div><div class="mm">${fmtTime(dt)}</div>`
+      :`<div class="mt">${dt?fmtTime(dt):'TBD'}</div><div class="mm">Avspark</div>`;
   const bc=fin?'b-fin':tod?'b-idag':'b-kom',bt=fin?'Ferdig':tod?'I dag':'Kommende';
-  const ctr=sc
-    ?`<div class="ms">${sc[0]}&thinsp;–&thinsp;${sc[1]}</div><div class="mm">${fmtTime(dt)}</div>`
-    :`<div class="mt">${dt?fmtTime(dt):'TBD'}</div><div class="mm">Avspark</div>`;
+  const badge=live
+    ?`<span class="mb" style="background:rgba(200,0,0,.25);color:#f04040;border:1px solid #c03030"><span class="live-dot" style="width:6px;height:6px;display:inline-block;vertical-align:middle;margin-right:3px"></span>LIVE</span>`
+    :`<span class="mb ${bc}">${bt}</span>`;
   return`<div class="match-card${isN?' nc':''}${isKO?' kc':''}" data-midx="${idx}">
     <div class="ts">${flagEl(t1)}<span class="tn${t1==='Norway'?' no':''}">${tn(t1)}</span></div>
-    <div class="mc">${ctr}<span class="mb ${bc}">${bt}</span><div class="mr">${lbl}</div></div>
+    <div class="mc">${ctr}${badge}<div class="mr">${lbl}</div></div>
     <div class="ts r">${flagEl(t2)}<span class="tn${t2==='Norway'?' no':''}">${tn(t2)}</span></div>
   </div>`;
 }
@@ -1060,7 +1071,7 @@ function renderKampprogram(){
     el.innerHTML=`<p style="color:rgba(244,236,200,.4);font-size:17px;padding:2rem 0;text-align:center">${currentStatus==='idag'?'Ingen VM-kamper i dag. Prøv «Alle».':'Ingen kamper.'}</p>`;return;
   }
   const byDate=new Map();
-  matches.forEach(m=>{const dt=parseDT(m.date,m.time);const k=dt?fmtLong(dt):(m.date||'?');if(!byDate.has(k))byDate.set(k,[]);byDate.get(k).push(m)});
+  matches.forEach(m=>{const cd=calDate(m);const k=cd?cap(new Date(cd+'T12:00:00Z').toLocaleDateString('nb-NO',{weekday:'long',day:'numeric',month:'long',timeZone:'Europe/Oslo'})):(m.date||'?');if(!byDate.has(k))byDate.set(k,[]);byDate.get(k).push(m)});
   let html='';
   byDate.forEach((items,lbl)=>{html+=`<div class="date-sec"><div class="group-header">${lbl}</div>`;items.forEach(m=>html+=matchCardHtml(m));html+='</div>';});
   el.innerHTML=html;
