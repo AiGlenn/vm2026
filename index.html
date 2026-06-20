@@ -282,8 +282,10 @@
     /* Player sprites — pre-generated PNG files per team×head type */
     .swos-char{width:48px;height:56px;flex-shrink:0;image-rendering:pixelated;display:block;object-fit:none;object-position:left top}
     .swos-char-sm{width:40px;height:55px;flex-shrink:0;image-rendering:pixelated;display:block;object-fit:contain}
-    .swos-sprite-wrap{position:relative;width:30px;height:35px;flex-shrink:0;overflow:hidden}
-    .swos-head-ovl{position:absolute;top:-2px;left:50%;transform:translateX(-50%);width:21px;height:21px;image-rendering:pixelated;display:block}
+    /* Outer positions head; inner clips transparent sprite area */
+    .swos-sprite-outer{position:relative;width:30px;height:35px;flex-shrink:0}
+    .swos-sprite-wrap{position:relative;width:30px;height:35px;overflow:hidden}
+    .swos-head-ovl{position:absolute;top:-2px;left:50%;transform:translateX(calc(-50% - 5px));width:21px;height:21px;image-rendering:pixelated;display:block}
     /* Team card single-col squad list (SWOS style) */
     .swos-squad-panel{background:rgba(0,8,40,.55);border:1px solid rgba(90,120,200,.25);padding:.4rem .5rem;margin-top:.35rem}
     .swos-squad-list{display:flex;flex-direction:column;gap:0}
@@ -584,10 +586,12 @@ async function fetchWCScorers(){
       if(scorers.length)cacheSet('wc_scorers',scorers);
     }catch{return}
   }
-  wcScorers={};
+  wcScorers={};wcScorerTeams={};
   for(const s of scorers){
     if(!s.name||!s.goals)continue;
-    wcScorers[s.name.toUpperCase()]=s.goals;
+    const k=s.name.toUpperCase();
+    wcScorers[k]=s.goals;
+    if(s.team)wcScorerTeams[k]=s.team;
   }
   computeGoals();
   if(currentView==='statistikk')showView('statistikk');
@@ -1190,7 +1194,7 @@ function renderStatistikk(){
 
   let rows='';
   scorers.forEach(([name,g],i)=>{
-    const team=playerTeam[name]||null;
+    const team=playerTeam[name]||wcScorerTeams[name]||null;
     const balls='⚽'.repeat(Math.min(g,10))+(g>10?`+${g-10}`:'');
     rows+=`<tr${i===0?' style="background:rgba(246,212,90,.08)"':''}>
       <td class="td-pos ${i<3?'q':''}" style="font-size:16px">${i+1}</td>
@@ -1337,7 +1341,7 @@ function getKitSprite(skin,teamName){
 }
 
 /* ══ PLAYER STATS ══ */
-let playerGoals={},wcScorers={};
+let playerGoals={},wcScorers={},wcScorerTeams={};
 function computeGoals(){
   const g={};
   allMatches.forEach(m=>{
@@ -1449,7 +1453,7 @@ function swosSquadRow(p,num,teamName){
   const sp=getKitSprite(skin,teamName);
   const fb=getKitSprite('Light','DEFAULT');
   const hc=`sprites/head-${headShape}-skin${skin}-hair${hair}.png`;
-  const sprite=`<div class="swos-sprite-wrap"><img class="swos-char-sm" src="${sp}" onerror="if(!this._f){this._f=1;this.src='${fb}'}" alt=""><img class="swos-head-ovl" src="${hc}" alt=""></div>`;
+  const sprite=`<div class="swos-sprite-outer"><div class="swos-sprite-wrap"><img class="swos-char-sm" src="${sp}" onerror="if(!this._f){this._f=1;this.src='${fb}'}" alt=""></div><img class="swos-head-ovl" src="${hc}" alt=""></div>`;
   const badges=[
     g?`<span class="swos-sb g has">⚽ ${g}</span>`:'',
     a?`<span class="swos-sb a has">A ${a}</span>`:'',
