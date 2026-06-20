@@ -2,7 +2,7 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>VM-Kampprogram 2026</title>
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
@@ -16,10 +16,12 @@
 
     *,*::before,*::after{box-sizing:border-box;border:0 solid;margin:0;padding:0}
     h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}ol,ul{list-style:none}
-    img{display:block;max-width:100%;height:auto}button{cursor:pointer;font-family:inherit;background:none}
+    img{display:block;max-width:100%;height:auto}button{cursor:pointer;font-family:inherit;background:none;touch-action:manipulation}
+    button,[data-midx],[data-team],[data-st],[data-view]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     table{border-collapse:collapse}:root{color-scheme:dark}
     body{font-family:'VT323',ui-monospace,monospace;background:#056cc3;color:#f4ecc8;
-      -webkit-font-smoothing:antialiased;font-size:21px;line-height:1.35;min-height:100vh}
+      -webkit-font-smoothing:antialiased;font-size:21px;line-height:1.35;min-height:100vh;
+      padding-top:env(safe-area-inset-top)}
     .stadium-bg{position:fixed;top:-50px;right:0;bottom:0;left:0;z-index:-2;background:#056cc3 url('stadium.png') top/cover no-repeat;image-rendering:pixelated}
     .stadium-overlay{position:fixed;inset:0;z-index:-1;
       background:radial-gradient(120% 60% at 50% 0,rgba(246,212,90,.12),transparent 55%),
@@ -219,8 +221,7 @@
     .csc{font-family:'Press Start 2P',monospace;font-size:11px;color:#f6d45a;white-space:nowrap;line-height:1}
     .ctm{font-size:15px;color:rgba(244,236,200,.5);white-space:nowrap;line-height:1}
     .cmore{font-size:13px;color:rgba(244,236,200,.3);text-align:center;padding:2px 0}
-    body.z-fire .ctn{font-size:16px} body.z-fire .cfl{width:22px;height:15px} body.z-fire .csc{font-size:12px} body.z-fire .ctm{font-size:16px} body.z-fire .cal-mrow{padding:4px 5px;margin-bottom:3px} body.z-fire .cal-ctr{min-width:42px}
-    body.z-to .ctn{font-size:20px} body.z-to .cfl{width:28px;height:19px} body.z-to .csc{font-size:13px} body.z-to .ctm{font-size:19px} body.z-to .cal-mrow{padding:6px 7px;margin-bottom:4px} body.z-to .cal-ctr{min-width:55px} body.z-to .cal-num{font-size:10px;margin-bottom:6px}
+    body.z-fire .ctn{font-size:18px} body.z-fire .cfl{width:25px;height:17px} body.z-fire .csc{font-size:13px} body.z-fire .ctm{font-size:17px} body.z-fire .cal-mrow{padding:5px 6px;margin-bottom:3px} body.z-fire .cal-ctr{min-width:48px} body.z-fire .cal-num{font-size:10px;margin-bottom:5px}
     @media(max-width:700px){.ctn{display:none!important}}
 
     /* ═══════════════════════════════
@@ -267,7 +268,8 @@
     .br-meta{font-size:15px;color:rgba(244,236,200,.35);padding:2px 7px;border-top:1px solid rgba(232,190,74,.08);text-align:center}
     .third-place{margin-top:1rem}
     .bracket-list-fallback{display:none}
-    @media(max-width:600px){.bracket-outer{display:none}.bracket-list-fallback{display:block;margin-top:1rem}}
+    .mob-bracket-wrap{display:none}
+    @media(max-width:767px){.bracket-outer{display:none}.third-place{display:none}.mob-bracket-wrap{display:block;margin-top:.5rem;margin-left:-1.25rem;margin-right:-1.25rem}}
 
     /* ═══════════════════════════
        SWOS TROPP PANEL
@@ -377,16 +379,6 @@
     .stat-lbl{position:relative;z-index:1;font-size:13px;color:rgba(244,236,200,.75);text-align:center;width:100%;white-space:nowrap}
     /* ── MOBIL BUNNMENY ── */
     #mobNav{display:none}
-    #refreshBtn{display:none}
-    @media(max-width:767px){
-      #refreshBtn{
-        display:block;position:fixed;top:env(safe-area-inset-top,0);right:0;z-index:700;
-        background:rgba(17,30,14,.82);border:none;border-bottom-left-radius:6px;
-        color:rgba(244,236,200,.55);font-size:18px;padding:6px 10px;cursor:pointer;
-        line-height:1;backdrop-filter:blur(4px)
-      }
-      #refreshBtn:active{color:#f6d45a}
-    }
     @media(max-width:767px){
       .view-nav{display:none}
       body{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
@@ -399,7 +391,7 @@
       }
       .mob-tab{
         flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-        padding:7px 1px 9px;gap:4px;
+        position:relative;padding:7px 1px 9px;gap:4px;
         font-family:'VT323',monospace;font-size:min(13px,3vw);letter-spacing:.01em;
         white-space:nowrap;overflow:hidden;
         color:rgba(244,236,200,.62);background:none;border:none;cursor:pointer;position:relative;
@@ -415,11 +407,27 @@
       .mob-tab.mob-active{animation:mob-pulse 2.6s ease-in-out infinite}
       /* Solid fargebakgrunn — same som desktop-knapper */
       .mob-tab[data-view="forside"].mob-active{background:#c06000;color:#fff}
+      .mob-tab[data-view="forside"].mob-active::after{content:'⟳';position:absolute;top:4px;right:6px;font-size:11px;opacity:.5;line-height:1}
       .mob-tab[data-view="kampprogram"].mob-active{background:#b89018;color:#1a1000}
       .mob-tab[data-view="kalender"].mob-active{background:#2e6329;color:#f4ecc8}
       .mob-tab[data-view="grupper"].mob-active{background:#6b3fa0;color:#fff}
       .mob-tab[data-view="sluttspill"].mob-active{background:#3a7db8;color:#fff}
       .mob-tab[data-view="statistikk"].mob-active{background:#1a7a6e;color:#fff}
+      /* ── Mobil sluttspill-bracket ── */
+      .mob-bracket-inner{display:flex;position:relative;width:100%}
+      .mob-half{flex:1;display:flex;min-width:0;gap:5px}
+      .mob-col{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-around;padding:0 1px;box-sizing:border-box}
+      .mob-center{flex-shrink:0;width:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0 2px;box-sizing:border-box}
+      .mob-fin-lbl{font-family:'Press Start 2P',monospace;font-size:5px;color:#f6d45a;text-align:center;margin-top:2px}
+      .mbr-card{width:100%;box-sizing:border-box;background:linear-gradient(180deg,#1e401a,#112408);border:1.5px solid rgba(232,190,74,.6);cursor:pointer}
+      .mbr-card.mbr-nor{border-color:#f6d45a;box-shadow:0 0 3px rgba(246,212,90,.35)}
+      .mbr-ph{height:34px;visibility:hidden;width:100%}
+      .mbr-row{display:flex;align-items:center;justify-content:space-between;gap:1px;padding:3px 3px;border-bottom:1px solid rgba(232,190,74,.1)}
+      .mbr-row:last-child{border-bottom:none}
+      .mbr-row.mbr-win{background:rgba(90,224,90,.1)}
+      .mbr-sc{font-family:'Press Start 2P',monospace;font-size:6px;color:rgba(244,236,200,.5);flex-shrink:0}
+      .mbr-sc.mbr-sw{color:#5ae05a}
+      .mob-bronze-hdr{font-family:'Press Start 2P',monospace;font-size:8px;color:#c08030;text-align:center;margin:.8rem 0 .3rem}
     }
   </style>
 </head>
@@ -486,8 +494,7 @@
   <div class="filter-row" id="zoomBar" style="display:none">
     <span class="flabel">Zoom:</span>
     <button class="fbtn" data-zoom="uke">7 dager</button>
-    <button class="fbtn fz" data-zoom="fire">4 dager</button>
-    <button class="fbtn" data-zoom="to">2 dager</button>
+    <button class="fbtn fz" data-zoom="fire">3 dager</button>
   </div>
 
   <div class="loading" id="loading"><span class="ldots">Henter kamper</span></div>
@@ -505,13 +512,12 @@
   </footer>
 </div>
 
-<button id="refreshBtn" title="Oppdater" onclick="localStorage.clear();location.reload()">⟳</button>
 <nav id="mobNav" aria-label="Mobilmeny">
   <button class="mob-tab mob-active" data-view="forside"><span class="mob-icon">⚽</span><span>FORSIDE</span></button>
   <button class="mob-tab" data-view="kampprogram"><span class="mob-icon">📋</span><span>KAMPER</span></button>
   <button class="mob-tab" data-view="kalender"><span class="mob-icon">📅</span><span>KALENDER</span></button>
   <button class="mob-tab" data-view="grupper"><span class="mob-icon">🏟</span><span>GRUPPER</span></button>
-  <button class="mob-tab" data-view="sluttspill"><span class="mob-icon">🏆</span><span>SLUTTSPILL</span></button>
+  <button class="mob-tab" data-view="sluttspill"><span class="mob-icon"><img src="trophy.png" style="width:22px;height:22px;object-fit:contain;image-rendering:pixelated;vertical-align:middle"></span><span>SLUTTSPILL</span></button>
   <button class="mob-tab" data-view="statistikk"><span class="mob-icon">⭐</span><span>TOPPSCORER</span></button>
 </nav>
 <script src="swos-players.js"></script>
@@ -561,7 +567,21 @@ async function fetchWCMatchDetail(wcId,m,midx){
       team:c.team===1?m.team1:m.team2,reason:c.reason_en||''}));
   const evSect=document.querySelector('#modalContent .ev-section');
   if(evSect)evSect.outerHTML=buildEventsHTML(m);
-  if(detail.stats?.length)renderWCStats(detail.stats,midx);
+  if(detail.stats?.length){
+    let stats=detail.stats;
+    if(m.cards?.length){
+      const yc1=m.cards.filter(c=>c.team===m.team1&&!(c.type||'').toLowerCase().includes('red')).length;
+      const yc2=m.cards.filter(c=>c.team===m.team2&&!(c.type||'').toLowerCase().includes('red')).length;
+      const rc1=m.cards.filter(c=>c.team===m.team1&&(c.type||'').toLowerCase().includes('red')).length;
+      const rc2=m.cards.filter(c=>c.team===m.team2&&(c.type||'').toLowerCase().includes('red')).length;
+      stats=stats.map(s=>{
+        if(s.k_en==='Yellow cards')return{...s,v:[yc1,yc2]};
+        if(s.k_en==='Red cards')return{...s,v:[rc1,rc2]};
+        return s;
+      });
+    }
+    renderWCStats(stats,midx);
+  }
   computeGoals();computeAssists();computeCards();
 }
 
@@ -614,13 +634,14 @@ async function fetchLiveMatches(){
     if(!r.ok)return;
     const j=await r.json();
     const prev=JSON.stringify(liveMatches.map(m=>m._wcId+':'+JSON.stringify(m.score)));
-    liveMatches=(j.matches||[]).map(mapWCMatch);
+    const raw=j.matches||j.live||j.data||(Array.isArray(j)?j:[]);
+    liveMatches=raw.map(mapWCMatch);
     for(const lm of liveMatches){
       const m=allMatches.find(m=>m._wcId===lm._wcId||(m.team1===lm.team1&&m.team2===lm.team2));
       if(m){m.status=lm.status;m.live_minute=lm.live_minute;if(lm.score)m.score=lm.score;}
     }
     const curr=JSON.stringify(liveMatches.map(m=>m._wcId+':'+JSON.stringify(m.score)));
-    if(prev!==curr&&currentView==='forside')renderForside();
+    if(currentView==='forside'&&(prev!==curr||liveMatches.length))renderForside();
   }catch{}
 }
 
@@ -630,26 +651,30 @@ function startLivePolling(){
   liveInterval=setInterval(fetchLiveMatches,60*1000);
 }
 
+const LIVE_DEAD=new Set(['','upcoming','scheduled','finished','complete','completed','ns','tbd','ft','aet','pen','pso']);
 function buildLiveHTML(){
-  if(!liveMatches.length)return'';
-  let html='<div class="pixel-panel live-panel" style="margin-bottom:1rem"><div class="group-header"><span class="live-dot"></span>LIVE NÅ</div>';
-  for(const lm of liveMatches){
+  const liveIds=new Set(liveMatches.map(m=>m._wcId));
+  const fromAll=allMatches.filter(m=>!liveIds.has(m._wcId)&&m.status&&!LIVE_DEAD.has((m.status||'').toLowerCase())&&!m.score?.ft);
+  const combined=[...liveMatches,...fromAll];
+  if(!combined.length)return'';
+  let html='<div class="pixel-panel live-panel" style="margin-bottom:1rem"><div class="group-header"><span class="live-dot"></span>LIVE NÅ</div><div style="padding:.3rem .4rem .05rem">';
+  for(const lm of combined){
     const idx=allMatches.findIndex(m=>m._wcId===lm._wcId||(m.team1===lm.team1&&m.team2===lm.team2));
     const m=idx>=0?allMatches[idx]:lm;
-    const sc=m.score?.ft;
-    const sc1=sc?sc[0]:'–',sc2=sc?sc[1]:'–';
-    const minLbl=lm.live_minute||(lm.status==='HT'?'HT':'');
-    html+=`<div class="live-card" onclick="${idx>=0?`openModal(${idx})`:''}" style="${idx<0?'cursor:default':''}">
-      <div class="live-min">${minLbl}${minLbl&&minLbl!=='HT'?"'":''}
-      </div>
-      <div class="live-score-row">
-        <div class="live-team">${flagEl(m.team1,'sm')}<span>${tn(m.team1)}</span></div>
-        <div class="live-score">${sc1} – ${sc2}</div>
-        <div class="live-team right">${flagEl(m.team2,'sm')}<span>${tn(m.team2)}</span></div>
-      </div>
+    const sc=m.score?.ft,t1=m.team1||'?',t2=m.team2||'?';
+    const isN=t1==='Norway'||t2==='Norway';
+    const lbl=m.group?(GROUP_NO[m.group]||m.group):(ROUND_NO[m.round]||m.round||'');
+    const minRaw=m.live_minute||(m.status==='HT'?'HT':(!LIVE_DEAD.has((m.status||'').toLowerCase())?m.status:''));
+    const minStr=minRaw?`${minRaw}${/^\d+$/.test(String(minRaw))?"'":''}`:' ';
+    const ctr=`<div class="ms">${sc?sc[0]:'–'}&thinsp;–&thinsp;${sc?sc[1]:'–'}</div><div class="mm">${minStr}</div>`;
+    const badge=`<span class="mb" style="background:rgba(200,0,0,.25);color:#f04040;border:1px solid #c03030"><span class="live-dot" style="width:6px;height:6px;display:inline-block;vertical-align:middle;margin-right:3px"></span>LIVE</span>`;
+    html+=`<div class="match-card${isN?' nc':''}" data-midx="${idx>=0?idx:''}">
+      <div class="ts">${flagEl(t1)}<span class="tn${t1==='Norway'?' no':''}">${tn(t1)}</span></div>
+      <div class="mc">${ctr}${badge}<div class="mr">${lbl}</div></div>
+      <div class="ts r">${flagEl(t2)}<span class="tn${t2==='Norway'?' no':''}">${tn(t2)}</span></div>
     </div>`;
   }
-  return html+'</div>';
+  return html+'</div></div>';
 }
 
 /* ── LOOKUPS ── */
@@ -708,8 +733,7 @@ const WEEKDAYS_FULL=['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','L
 const MONTHS_NO=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
 const ZCFG={
   uke: {cols:7,minH:70, max:3, showName:false,offset:true, hdr:true },
-  fire:{cols:4,minH:145,max:8, showName:true, offset:false,hdr:false},
-  to:  {cols:2,minH:295,max:99,showName:true, offset:false,hdr:false},
+  fire:{cols:3,minH:190,max:10,showName:true, offset:false,hdr:false},
 };
 
 /* ── STATE ── */
@@ -999,8 +1023,8 @@ function renderForside(){
   const liveHtml=buildLiveHTML();
 
   /* Filter out live match IDs from upcoming/finished to avoid dupes */
-  const liveIds=new Set(liveMatches.map(f=>f.fixture.id));
-  const notLive=allMatches.filter(m=>!m._apifId||!liveIds.has(m._apifId));
+  const liveIds=new Set(liveMatches.map(m=>m._wcId));
+  const notLive=allMatches.filter(m=>!liveIds.has(m._wcId));
 
   /* Next 3 upcoming */
   const next3=notLive.filter(m=>!m.score?.ft).sort(byTime).slice(0,3);
@@ -1099,6 +1123,36 @@ function calcStandings(gk){
     if(b.gf!==a.gf)return b.gf-a.gf;return a.n.localeCompare(b.n);
   });
 }
+function buildBestThirdHTML(){
+  const thirds=[];
+  ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(g=>{
+    const st=calcStandings(`Group ${g}`);
+    if(st.length>=3)thirds.push({...st[2],group:g});
+  });
+  const active=thirds.filter(t=>t.gp>0);
+  if(!active.length)return'';
+  active.sort((a,b)=>{
+    if(b.pts!==a.pts)return b.pts-a.pts;
+    const da=a.gf-a.ga,db=b.gf-b.ga;if(db!==da)return db-da;
+    if(b.gf!==a.gf)return b.gf-a.gf;return a.n.localeCompare(b.n);
+  });
+  let html=`<div class="pixel-panel" style="margin-bottom:1.1rem">
+    <div class="group-header">Beste treere <span style="font-family:'VT323',monospace;font-size:16px;color:rgba(244,236,200,.45);font-weight:normal">(topp 8 går videre)</span></div>
+    <table class="st-tbl"><thead><tr>
+      <th>#</th><th style="text-align:left;padding-left:4px">Lag</th>
+      <th>S</th><th>V</th><th>U</th><th>T</th><th>Mål</th><th>D</th><th>P</th>
+    </tr></thead><tbody>`;
+  active.forEach((t,i)=>{
+    const gd=t.gf-t.ga;
+    html+=`<tr class="${t.n==='Norway'?'row-no':''} ${i===8?'qualify-line':''}">
+      <td class="td-pos ${i<8?'q':''}">${i+1}</td>
+      <td><div class="td-lag" data-team="${t.n}">${flagEl(t.n,'xs')}<span>${tn(t.n)}</span></div></td>
+      <td>${t.gp}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
+      <td>${t.gf}-${t.ga}</td><td class="td-gd">${gd>0?'+'+gd:gd}</td><td class="td-pts">${t.pts}</td>
+    </tr>`;
+  });
+  return html+'</tbody></table></div>';
+}
 function buildGrupperHTML(){
   let html='<div class="grupper-grid">';
   ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(g=>{
@@ -1118,10 +1172,89 @@ function buildGrupperHTML(){
   return html+'</div>';
 }
 function renderGrupper(){
-  document.getElementById('vGrupper').innerHTML=buildGrupperHTML();
+  document.getElementById('vGrupper').innerHTML=buildBestThirdHTML()+buildGrupperHTML();
 }
 
 /* ══ RENDER: SLUTTSPILL ══ */
+/* ── Mobile bracket helpers ── */
+function mbrCard(m,idx){
+  if(!m)return`<div id="mbr${idx}" class="mbr-ph"></div>`;
+  const t1=m.team1||'?',t2=m.team2||'?',sc=m.score?.ft;
+  const w1=sc&&sc[0]>sc[1],w2=sc&&sc[1]>sc[0];
+  function row(t,sv,win){
+    const ph=isPH(t);
+    const fl=(!ph&&FLAG_FILE[t])?`<img src="flags/${FLAG_FILE[t]}.png" style="width:16px;height:11px;flex-shrink:0;image-rendering:pixelated" alt="">`:`<span style="width:16px;height:11px;background:rgba(255,255,255,.12);display:inline-block;flex-shrink:0"></span>`;
+    const score=sc!==undefined&&!ph?`<span class="mbr-sc${win?' mbr-sw':''}">${sv}</span>`:'';
+    return`<div class="mbr-row${win?' mbr-win':''}">${fl}${score}</div>`;
+  }
+  return`<div class="mbr-card${t1==='Norway'||t2==='Norway'?' mbr-nor':''}" id="mbr${idx}" data-midx="${idx}">
+    ${row(t1,sc?sc[0]:'-',w1)}${row(t2,sc?sc[1]:'-',w2)}</div>`;
+}
+function mbrCol(arr,si,BH){
+  return`<div class="mob-col" style="height:${BH}px">${arr.map((m,i)=>mbrCard(m,si+i)).join('')}</div>`;
+}
+function buildMobileBracket(gc,r32,r16,qf,sf,tp,fin){
+  const BH=560;
+  const lft=`<div class="mob-half" style="height:${BH}px">
+    ${mbrCol(r32.slice(0,8),gc,BH)}${mbrCol(r16.slice(0,4),gc+16,BH)}
+    ${mbrCol(qf.slice(0,2),gc+24,BH)}${mbrCol(sf.slice(0,1),gc+28,BH)}</div>`;
+  const ctr=`<div class="mob-center" style="height:${BH}px">
+    <img src="trophy.png" style="width:44px;height:44px;image-rendering:pixelated;object-fit:contain" alt="trophy">${mbrCard(fin,gc+31)}
+    <div class="mob-fin-lbl">FINALE</div></div>`;
+  const rgt=`<div class="mob-half" style="height:${BH}px">
+    ${mbrCol(sf.slice(1,2),gc+29,BH)}${mbrCol(qf.slice(2,4),gc+26,BH)}
+    ${mbrCol(r16.slice(4,8),gc+20,BH)}${mbrCol(r32.slice(8,16),gc+8,BH)}</div>`;
+  const brz=tp?`<div class="mob-bronze-hdr">🥉 BRONSEFINALE</div><div style="max-width:260px;margin:0 auto">${matchCardHtml(tp)}</div>`:'';
+  return`<div class="mob-bracket-inner" id="mbInner" style="height:${BH}px">${lft}${ctr}${rgt}</div>${brz}`;
+}
+function drawMobileSVG(){
+  const inner=document.getElementById('mbInner');if(!inner)return;
+  const old=inner.querySelector('svg.mob-svg');if(old)old.remove();
+  const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  sv.className='mob-svg';
+  sv.style.cssText='position:absolute;top:0;left:0;pointer-events:none;z-index:5;overflow:visible';
+  sv.setAttribute('width',inner.scrollWidth);sv.setAttribute('height',inner.scrollHeight);
+  inner.style.position='relative';
+  const ir=inner.getBoundingClientRect();
+  function mkPath(d,col,w){
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d',d);p.setAttribute('stroke',col||'#e8be4a');
+    p.setAttribute('stroke-width',w||'1.5');p.setAttribute('fill','none');p.setAttribute('stroke-opacity','.65');
+    sv.appendChild(p);
+  }
+  function pair(id1,id2,pid,goRight){
+    const e1=document.getElementById(`mbr${id1}`),e2=document.getElementById(`mbr${id2}`),ep=document.getElementById(`mbr${pid}`);
+    if(!e1||!e2||!ep)return;
+    const r1=e1.getBoundingClientRect(),r2=e2.getBoundingClientRect(),rp=ep.getBoundingClientRect();
+    const y1=(r1.top+r1.bottom)/2-ir.top,y2=(r2.top+r2.bottom)/2-ir.top,yp=(rp.top+rp.bottom)/2-ir.top;
+    const x1=goRight?r1.right-ir.left:r1.left-ir.left;
+    const x2=goRight?r2.right-ir.left:r2.left-ir.left;
+    const xp=goRight?rp.left-ir.left:rp.right-ir.left;
+    const xm=(x1+xp)/2;
+    mkPath(`M${x1} ${y1} H${xm} V${y2} H${x2} M${xm} ${yp} H${xp}`);
+  }
+  function arm(fid,tid,fRight,tLeft){
+    const ef=document.getElementById(`mbr${fid}`),et=document.getElementById(`mbr${tid}`);
+    if(!ef||!et)return;
+    const rf=ef.getBoundingClientRect(),rt=et.getBoundingClientRect();
+    const yf=(rf.top+rf.bottom)/2-ir.top,yt=(rt.top+rt.bottom)/2-ir.top;
+    const xf=fRight?rf.right-ir.left:rf.left-ir.left;
+    const xt=tLeft?rt.left-ir.left:rt.right-ir.left;
+    const xm=(xf+xt)/2;
+    mkPath(Math.abs(yf-yt)<3?`M${xf} ${yf} H${xt}`:`M${xf} ${yf} H${xm} V${yt} H${xt}`,'#f6d45a','1.5');
+  }
+  const gc=allMatches.findIndex(m=>!m.group);if(gc<0){inner.appendChild(sv);return}
+  for(let i=0;i<4;i++)pair(gc+i*2,gc+i*2+1,gc+16+i,true);
+  pair(gc+16,gc+17,gc+24,true);pair(gc+18,gc+19,gc+25,true);
+  pair(gc+24,gc+25,gc+28,true);
+  arm(gc+28,gc+31,true,true);
+  for(let i=0;i<4;i++)pair(gc+8+i*2,gc+9+i*2,gc+20+i,false);
+  pair(gc+20,gc+21,gc+26,false);pair(gc+22,gc+23,gc+27,false);
+  pair(gc+26,gc+27,gc+29,false);
+  arm(gc+29,gc+31,false,false);
+  inner.appendChild(sv);
+}
+
 function parseTRef(r){if(!r)return'TBD';const wm=r.match(/^W(\d+)$/);if(wm)return`V.K${wm[1]}`;const gm=r.match(/^(\d+)([A-L])$/);if(gm)return`${gm[1]}.Gr${gm[2]}`;return tn(r)}
 function isPH(r){return!r||!!r.match(/^[WL\d]/)}
 function brCard(m,idx){
@@ -1152,8 +1285,9 @@ function renderSluttspill(){
   ROUND_ORDER.forEach(rk=>{const rm=ko.filter(m=>m.round===rk||m.round===rk+'s');if(!rm.length)return;listHtml+=`<div style="margin-bottom:.9rem"><div class="group-header" style="font-size:9px;text-align:center">${ROUND_NO[rk]||rk}</div>`;rm.forEach(m=>listHtml+=matchCardHtml(m));listHtml+=`</div>`;});
   listHtml+='</div>';
   const thirdHtml=tp?`<div class="third-place"><div class="group-header" style="font-size:9px;text-align:center;margin-bottom:3px">BRONSEFINALE</div>${matchCardHtml(tp)}</div>`:'';
-  el.innerHTML=`<div class="bracket-outer"><div class="bracket-inner" id="bInner">${cols}</div></div>${thirdHtml}${listHtml}`;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>drawSVG(gc)));
+  const mobHtml=`<div class="mob-bracket-wrap">${buildMobileBracket(gc,r32,r16,qf,sf,tp,fin)}</div>`;
+  el.innerHTML=`<div class="bracket-outer"><div class="bracket-inner" id="bInner">${cols}</div></div>${thirdHtml}${listHtml}${mobHtml}`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{drawSVG(gc);drawMobileSVG()}));
 }
 function drawSVG(gc){
   const inner=document.getElementById('bInner');if(!inner)return;
@@ -1256,7 +1390,11 @@ function showView(view){
 
 /* ══ EVENT HANDLERS ══ */
 document.querySelector('.view-nav').addEventListener('click',e=>{const b=e.target.closest('.vbtn');if(b)showView(b.dataset.view)});
-document.getElementById('mobNav').addEventListener('click',e=>{const b=e.target.closest('.mob-tab');if(b){closeModal();closeTeamModal();showView(b.dataset.view)}});
+document.getElementById('mobNav').addEventListener('click',e=>{
+  const b=e.target.closest('.mob-tab');if(!b)return;
+  if(b.dataset.view==='forside'&&currentView==='forside'){localStorage.clear();location.reload();return;}
+  closeModal();closeTeamModal();showView(b.dataset.view);
+});
 document.getElementById('statusBar').addEventListener('click',e=>{
   const b=e.target.closest('[data-st]');if(!b)return;
   currentStatus=b.dataset.st;
