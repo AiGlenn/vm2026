@@ -1388,7 +1388,7 @@ function renderStatistikk(){
     const team=playerTeam[name]||wcScorerTeams[name]||null;
     rows+=`<tr${i===0?' style="background:rgba(246,212,90,.08)"':''}>
       <td class="td-pos ${i<3?'q':''}" style="font-size:16px">${i+1}</td>
-      <td><div style="display:flex;align-items:center;gap:.4rem">${team?flagEl(team,'sm'):''}<span style="font-size:24px">${name}</span></div></td>
+      <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0;width:100%"><div style="display:flex;align-items:center;gap:.4rem">${team?flagEl(team,'sm'):''}<span style="font-size:24px">${name}</span></div></td>
       <td class="td-pts" style="font-size:16px">${g}</td>
     </tr>`;
   });
@@ -1405,7 +1405,7 @@ function renderStatistikk(){
     <table class="st-tbl" style="width:100%">
       <thead><tr>
         <th>#</th><th style="text-align:left;padding-left:4px">Spiller</th>
-        <th style="text-align:right;padding-right:.4rem">Mål</th><th>Tot</th>
+        <th>Mål</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
