@@ -20,7 +20,7 @@
     table{border-collapse:collapse}:root{color-scheme:dark}
     body{font-family:'VT323',ui-monospace,monospace;background:#056cc3;color:#f4ecc8;
       -webkit-font-smoothing:antialiased;font-size:21px;line-height:1.35;min-height:100vh}
-    .stadium-bg{position:fixed;inset:0;z-index:-2;background:#056cc3 url('stadium.png') top/cover no-repeat;image-rendering:pixelated}
+    .stadium-bg{position:fixed;top:-50px;right:0;bottom:0;left:0;z-index:-2;background:#056cc3 url('stadium.png') top/cover no-repeat;image-rendering:pixelated}
     .stadium-overlay{position:fixed;inset:0;z-index:-1;
       background:radial-gradient(120% 60% at 50% 0,rgba(246,212,90,.12),transparent 55%),
       linear-gradient(180deg,rgba(8,22,8,.15),rgba(8,20,8,.45) 38%,rgba(5,14,5,.86))}
@@ -487,7 +487,7 @@
   <div id="vSluttspill"                     style="display:none"></div>
   <div id="vStatistikk"                     style="display:none"></div>
   <footer>
-    Data: <a href="https://github.com/openfootball/worldcup.json" target="_blank">openfootball/worldcup.json</a>
+    Data: <a href="https://wcup2026.org" target="_blank">wcup2026.org</a>
     &nbsp;·&nbsp; Kamprapporter: <a href="https://www.thesportsdb.com" target="_blank">TheSportsDB</a>
     &nbsp;·&nbsp; * Kamper 00–07 vises dagen før i kalender
   </footer>
@@ -503,198 +503,134 @@
 </nav>
 <script src="swos-players.js"></script>
 <script>
-const DATA_URL='https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
+const WCUP_URL='https://wcup2026.org/api/data.php';
 const SDB_BASE='https://www.thesportsdb.com/api/v1/json/3';
 
-/* ── API-FOOTBALL ── */
-const APIF_KEY='014f445f9190e2bf05b27b6e3bb705cd';
-const APIF_URL='https://v3.football.api-sports.io';
-// Name differences between API-Football and openfootball
-const APIF_TEAM={'USA':'United States','Bosnia-Herzegovina':'Bosnia & Herzegovina',
-  "Cote d'Ivoire":'Ivory Coast','Democratic Republic of Congo':'DR Congo',
-  'Korea Republic':'South Korea','Republic of Ireland':'Ireland',
-  'Trinidad and Tobago':'Trinidad & Tobago'};
-function apifTeam(n){return APIF_TEAM[n]||n}
+/* ── CACHE ── */
 function cacheGet(key,ttl){try{const r=localStorage.getItem(key);if(!r)return null;const o=JSON.parse(r);return Date.now()-o.ts<ttl?o.d:null}catch{return null}}
 function cacheSet(key,d){try{localStorage.setItem(key,JSON.stringify({ts:Date.now(),d}))}catch{}}
 
-async function enhanceWithAPIFootball(){
-  let list=cacheGet('apif_fx',60*60*1000); // 1h cache
-  if(!list){
-    try{
-      const r=await fetch(`${APIF_URL}/fixtures?league=1&season=2026`,{headers:{'x-apisports-key':APIF_KEY}});
-      if(!r.ok)return;
-      const j=await r.json();if(!j.response?.length)return;
-      list=j.response.map(f=>({
-        id:f.fixture.id,date:f.fixture.date.slice(0,10),
-        st:f.fixture.status.short,
-        home:f.teams.home.name,away:f.teams.away.name,
-        gh:f.goals.home,ga:f.goals.away,
-        hth:f.score.halftime.home,hta:f.score.halftime.away
-      }));
-      cacheSet('apif_fx',list);
-    }catch{return}
+/* ── wcup2026.org ── */
+function mapWCMatch(raw){
+  const scoreRaw=raw.score;
+  let ft=null;
+  if(Array.isArray(scoreRaw))ft=scoreRaw;
+  else if(typeof scoreRaw==='string'&&scoreRaw.trim()){
+    const p=scoreRaw.trim().split(/\s+/).map(Number);
+    if(p.length===2&&!isNaN(p[0])&&!isNaN(p[1]))ft=p;
   }
-  let updated=false;
-  for(const f of list){
-    if(!['FT','AET','PEN'].includes(f.st)||f.gh===null)continue;
-    const ah=apifTeam(f.home),aa=apifTeam(f.away);
-    const m=allMatches.find(m=>m.date===f.date&&
-      ((m.team1===ah&&m.team2===aa)||(m.team1===aa&&m.team2===ah)));
-    if(!m)continue;
-    const t1home=m.team1===ah;
-    const nft=t1home?[f.gh,f.ga]:[f.ga,f.gh];
-    if(!m.score?.ft||m.score.ft[0]!==nft[0]||m.score.ft[1]!==nft[1]){
-      m.score=m.score||{};m.score.ft=nft;
-      if(f.hth!==null)m.score.ht=t1home?[f.hth,f.hta]:[f.hta,f.hth];
-      updated=true;
-    }
-    if(!m._apifId)m._apifId=f.id;
-  }
-  if(updated){computeGoals();computeAssists();showView(currentView)}
+  const d=new Date(raw.datetime*1000);
+  const time=`${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')} UTC+0`;
+  return{_wcId:raw.id,date:raw.date,time,team1:raw.team1,team2:raw.team2,
+    group:raw.group||null,round:raw.round||null,ground:raw.ground||null,
+    status:raw.status,live_minute:raw.live_minute||null,score:ft?{ft}:null};
 }
 
-async function fetchApifEvents(fxId,m,midx){
-  const ttl=m.score?.ft?Number.MAX_SAFE_INTEGER:60*60*1000; // permanent for finished, 1h for ongoing
-  let evs=cacheGet('apif_ev_'+fxId,ttl);
-  if(!evs){
+async function fetchWCMatchDetail(wcId,m,midx){
+  const ttl=m.score?.ft?Number.MAX_SAFE_INTEGER:2*60*1000;
+  let detail=cacheGet('wc_m_'+wcId,ttl);
+  if(!detail){
     try{
-      const r=await fetch(`${APIF_URL}/fixtures/events?fixture=${fxId}`,{headers:{'x-apisports-key':APIF_KEY}});
+      const r=await fetch(`${WCUP_URL}?action=match&id=${wcId}`);
       if(!r.ok)return;
-      const j=await r.json();evs=j.response||[];
-      cacheSet('apif_ev_'+fxId,evs);
+      const j=await r.json();detail=j.match||null;
+      if(detail)cacheSet('wc_m_'+wcId,detail);
     }catch{return}
   }
-  const g1=[],g2=[];
-  for(const e of evs){
-    if(e.type!=='Goal')continue;
-    const og=e.detail==='Own Goal';
-    const nm=e.player.name||'?';
-    const min=String(e.time.elapsed+(e.time.extra||0));
-    const sc=apifTeam(e.team.name);
-    if(og){if(sc===m.team2)g1.push({name:nm,minute:min,owngoal:true});else g2.push({name:nm,minute:min,owngoal:true})}
-    else{if(sc===m.team1)g1.push({name:nm,minute:min,owngoal:false});else g2.push({name:nm,minute:min,owngoal:false})}
-  }
-  if(!m.goals1?.length)m.goals1=g1;
-  if(!m.goals2?.length)m.goals2=g2;
-  if(currentModalIdx!==midx)return;
+  if(!detail||currentModalIdx!==midx)return;
+  if(!m.score)m.score={};
+  if(Array.isArray(detail.score))m.score.ft=detail.score;
+  if(detail.ht)m.score.ht=detail.ht;
+  if(!m.goals1?.length)m.goals1=detail.goals1||[];
+  if(!m.goals2?.length)m.goals2=detail.goals2||[];
+  if(!m.cards?.length&&detail.cards?.length)
+    m.cards=detail.cards.map(c=>({name:c.name,minute:c.minute,type:c.type,result:c.type,
+      team:c.team===1?m.team1:m.team2,reason:c.reason_en||''}));
   const evSect=document.querySelector('#modalContent .ev-section');
   if(evSect)evSect.outerHTML=buildEventsHTML(m);
-  computeGoals();computeAssists();
+  if(detail.stats?.length)renderWCStats(detail.stats,midx);
+  computeGoals();computeAssists();computeCards();
 }
 
-async function fetchMatchStats(fxId,m,midx){
-  const ttl=m.score?.ft?Number.MAX_SAFE_INTEGER:60*60*1000; // permanent for finished, 1h for ongoing
-  let stats=cacheGet('apif_st_'+fxId,ttl);
-  if(!stats){
-    try{
-      const r=await fetch(`${APIF_URL}/fixtures/statistics?fixture=${fxId}`,{headers:{'x-apisports-key':APIF_KEY}});
-      if(!r.ok)return;
-      const j=await r.json();stats=j.response||[];
-      if(stats.length)cacheSet('apif_st_'+fxId,stats);
-    }catch{return}
-  }
-  if(!stats.length||currentModalIdx!==midx)return;
-  const[s1,s2]=stats;if(!s1||!s2)return;
-  const t1home=apifTeam(s1.team.name)===m.team1;
-  const st1=t1home?s1.statistics:s2.statistics;
-  const st2=t1home?s2.statistics:s1.statistics;
-  function gv(arr,type){const s=arr.find(x=>x.type===type);return s?.value??null}
-  const rows=[
-    {l:'Ballbesittelse',k:'Ball Possession',pct:true},
-    {l:'Skudd på mål',k:'Shots on Goal'},
-    {l:'Totalt skudd',k:'Total Shots'},
-    {l:'Corner',k:'Corner Kicks'},
-    {l:'Frispark',k:'Fouls'},
-    {l:'Offsider',k:'Offsides'},
-    {l:'Gule kort',k:'Yellow Cards'},
-  ];
+function renderWCStats(stats,midx){
+  if(currentModalIdx!==midx)return;
+  const el=document.getElementById('modal-stats-sect');if(!el)return;
+  const NO={'Possession':'Ballbesittelse','Shots':'Skudd totalt','Shots on target':'Skudd på mål',
+    'Corners':'Corner','Fouls':'Frispark','Offsides':'Offsider',
+    'Yellow cards':'Gule kort','Red cards':'Røde kort','Saves':'Redninger'};
   let html='<div class="ev-section"><div class="ev-hdr">Kampstatistikk</div><div class="stats-grid">';
-  for(const row of rows){
-    let v1=gv(st1,row.k),v2=gv(st2,row.k);
-    if(v1===null&&v2===null)continue;
-    v1=v1??0;v2=v2??0;
-    let p1,p2;
-    if(row.pct){p1=parseFloat(v1)||50;p2=100-p1}
-    else{const tot=(+v1||0)+(+v2||0);p1=tot?Math.round(100*(+v1||0)/tot):50;p2=100-p1}
+  for(const s of stats){
+    const lbl=NO[s.k_en]||s.k_en;const[v1,v2]=s.v;
+    const isPct=s.unit==='%';const tot=isPct?100:(v1+v2)||1;
+    const p1=isPct?v1:Math.round(100*v1/tot);const p2=100-p1;
     html+=`<div class="stat-row">
-      <span class="stat-val-l">${v1}</span>
-      <div class="stat-bar-wrap">
-        <div class="stat-bar-l" style="width:${p1}%"></div>
-        <span class="stat-lbl">${row.l}</span>
-        <div class="stat-bar-r" style="width:${p2}%"></div>
-      </div>
-      <span class="stat-val-r">${v2}</span>
+      <span class="stat-val-l">${v1}${isPct?'%':''}</span>
+      <div class="stat-bar-wrap"><div class="stat-bar-l" style="width:${p1}%"></div>
+        <span class="stat-lbl">${lbl}</span>
+        <div class="stat-bar-r" style="width:${p2}%"></div></div>
+      <span class="stat-val-r">${v2}${isPct?'%':''}</span>
     </div>`;
   }
-  html+='</div></div>';
-  const el=document.getElementById('modal-stats-sect');
-  if(el)el.innerHTML=html;
+  el.innerHTML=html+'</div></div>';
+}
+
+async function fetchWCScorers(){
+  let scorers=cacheGet('wc_scorers',30*60*1000);
+  if(!scorers){
+    try{
+      const r=await fetch(`${WCUP_URL}?action=scorers`);
+      if(!r.ok)return;
+      const j=await r.json();scorers=j.scorers||[];
+      if(scorers.length)cacheSet('wc_scorers',scorers);
+    }catch{return}
+  }
+  for(const s of scorers){
+    if(!s.name||!s.goals)continue;
+    const k=s.name.toUpperCase();
+    if((playerGoals[k]||0)<s.goals)playerGoals[k]=s.goals;
+  }
+  statLookup._cache=null;
+  if(currentView==='statistikk')showView('statistikk');
 }
 
 async function fetchLiveMatches(){
   try{
-    const r=await fetch(`${APIF_URL}/fixtures?league=1&season=2026&live=all`,{headers:{'x-apisports-key':APIF_KEY}});
+    const r=await fetch(`${WCUP_URL}?action=live`);
     if(!r.ok)return;
     const j=await r.json();
-    const prev=JSON.stringify(liveMatches.map(f=>f.fixture.id+':'+f.goals.home+'-'+f.goals.away));
-    liveMatches=j.response||[];
-    const curr=JSON.stringify(liveMatches.map(f=>f.fixture.id+':'+f.goals.home+'-'+f.goals.away));
-    // Attach apifId to allMatches for live entries
-    for(const f of liveMatches){
-      const ah=apifTeam(f.teams.home.name),aa=apifTeam(f.teams.away.name);
-      const m=allMatches.find(m=>(m.team1===ah&&m.team2===aa)||(m.team1===aa&&m.team2===ah));
-      if(m&&!m._apifId)m._apifId=f.fixture.id;
+    const prev=JSON.stringify(liveMatches.map(m=>m._wcId+':'+JSON.stringify(m.score)));
+    liveMatches=(j.matches||[]).map(mapWCMatch);
+    for(const lm of liveMatches){
+      const m=allMatches.find(m=>m._wcId===lm._wcId||(m.team1===lm.team1&&m.team2===lm.team2));
+      if(m){m.status=lm.status;m.live_minute=lm.live_minute;if(lm.score)m.score=lm.score;}
     }
+    const curr=JSON.stringify(liveMatches.map(m=>m._wcId+':'+JSON.stringify(m.score)));
     if(prev!==curr&&currentView==='forside')renderForside();
   }catch{}
 }
 
-function getApifId(m){
-  if(m._apifId)return m._apifId;
-  const list=cacheGet('apif_fx',60*60*1000);
-  if(!list)return null;
-  const f=list.find(f=>{
-    const fh=apifTeam(f.home),fa=apifTeam(f.away);
-    return f.date===m.date&&((fh===m.team1&&fa===m.team2)||(fh===m.team2&&fa===m.team1));
-  });
-  if(f){m._apifId=f.id;return f.id}
-  return null;
-}
-
 function startLivePolling(){
   if(liveInterval)return;
-  const now=Date.now();
-  const relevant=allMatches.some(m=>{
-    const dt=parseDT(m.date,m.time);
-    if(!dt)return false;
-    const diff=dt.getTime()-now;
-    return diff>-4*3600*1000&&diff<4*3600*1000;
-  });
-  if(!relevant)return;
   fetchLiveMatches();
-  liveInterval=setInterval(fetchLiveMatches,5*60*1000); // every 5 min (budget-friendly)
+  liveInterval=setInterval(fetchLiveMatches,60*1000);
 }
 
 function buildLiveHTML(){
   if(!liveMatches.length)return'';
   let html='<div class="pixel-panel live-panel" style="margin-bottom:1rem"><div class="group-header"><span class="live-dot"></span>LIVE NÅ</div>';
-  for(const f of liveMatches){
-    const ah=apifTeam(f.teams.home.name),aa=apifTeam(f.teams.away.name);
-    const gh=f.goals.home??'–',ga=f.goals.away??'–';
-    const st=f.fixture.status;
-    const minLbl=st.short==='HT'?'HT':st.elapsed?(st.elapsed+(st.extra?'+'+st.extra:''))+"'":'';
-    const m=allMatches.find(m=>(m.team1===ah&&m.team2===aa)||(m.team1===aa&&m.team2===ah));
-    const idx=m?allMatches.indexOf(m):-1;
-    const t1home=m?.team1===ah;
-    const sc1=t1home?gh:ga,sc2=t1home?ga:gh;
-    const t1=m?.team1||ah,t2=m?.team2||aa;
+  for(const lm of liveMatches){
+    const idx=allMatches.findIndex(m=>m._wcId===lm._wcId||(m.team1===lm.team1&&m.team2===lm.team2));
+    const m=idx>=0?allMatches[idx]:lm;
+    const sc=m.score?.ft;
+    const sc1=sc?sc[0]:'–',sc2=sc?sc[1]:'–';
+    const minLbl=lm.live_minute||(lm.status==='HT'?'HT':'');
     html+=`<div class="live-card" onclick="${idx>=0?`openModal(${idx})`:''}" style="${idx<0?'cursor:default':''}">
-      <div class="live-min">${minLbl}</div>
+      <div class="live-min">${minLbl}${minLbl&&minLbl!=='HT'?"'":''}
+      </div>
       <div class="live-score-row">
-        <div class="live-team">${flagEl(t1,'sm')}<span>${tn(t1)}</span></div>
+        <div class="live-team">${flagEl(m.team1,'sm')}<span>${tn(m.team1)}</span></div>
         <div class="live-score">${sc1} – ${sc2}</div>
-        <div class="live-team right">${flagEl(t2,'sm')}<span>${tn(t2)}</span></div>
+        <div class="live-team right">${flagEl(m.team2,'sm')}<span>${tn(m.team2)}</span></div>
       </div>
     </div>`;
   }
@@ -1008,12 +944,7 @@ function openModal(idx){
       const el=document.getElementById('modal-sdb-sect');
       if(el)el.outerHTML='';
     });
-    // Fetch goal events and stats from API-Football
-    const apifId=getApifId(m);
-    if(apifId){
-      if(!(m.goals1?.length||m.goals2?.length))fetchApifEvents(apifId,m,idx);
-      fetchMatchStats(apifId,m,idx);
-    }
+    if(m._wcId!=null)fetchWCMatchDetail(m._wcId,m,idx);
   }
 }
 function closeModal(){
@@ -1584,15 +1515,21 @@ function closeTeamModal(){
 /* ══ LOAD ══ */
 async function loadData(){
   try{
-    const res=await fetch(DATA_URL);
-    if(!res.ok)throw new Error();
-    const data=await res.json();allMatches=data.matches||[];
+    let all=cacheGet('wc_all',5*60*1000);
+    if(!all){
+      const res=await fetch(`${WCUP_URL}?action=all`);
+      if(!res.ok)throw new Error();
+      const data=await res.json();
+      all=data.matches||[];
+      if(all.length)cacheSet('wc_all',all);
+    }
+    allMatches=all.map(mapWCMatch);
     computeGoals();computeAssists();computeCards();
     document.getElementById('loading').style.display='none';
     showView('forside');
-    fetchPlayerRatings(); // non-blocking — fills in ratings when SofaScore responds
-    enhanceWithAPIFootball(); // non-blocking — overlays live results from API-Football
-    startLivePolling(); // non-blocking — polls live scores every 5 min when matches are on
+    fetchPlayerRatings();
+    fetchWCScorers();
+    startLivePolling();
   }catch{
     document.getElementById('loading').style.display='none';
     document.getElementById('errbox').style.display='block';
