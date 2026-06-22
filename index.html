@@ -388,7 +388,7 @@
     #mobNav{display:none}
     @media(max-width:767px){
       .view-nav{display:none}
-      body{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+      body{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
       #mobNav{
         display:flex;position:fixed;bottom:0;left:0;right:0;z-index:600;
         background:#111e0e;
@@ -833,19 +833,10 @@ function matchCardHtml(m){
   const badge=live
     ?`<span class="mb" style="background:rgba(200,0,0,.25);color:#f04040;border:1px solid #c03030"><span class="live-dot" style="width:6px;height:6px;display:inline-block;vertical-align:middle;margin-right:3px"></span>LIVE</span>`
     :`<span class="mb ${bc}">${bt}</span>`;
-  const g1=m.goals1||[],g2=m.goals2||[];
-  const scorersHtml=(g1.length||g2.length)&&fin
-    ?`<div style="grid-column:1/-1;display:flex;justify-content:space-between;font-size:13px;color:rgba(244,236,200,.38);padding:.12rem .1rem .05rem;border-top:1px solid rgba(232,190,74,.08);gap:.4rem;overflow:hidden">
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">⚽ ${g1.map(g=>`${g.name||'?'}${g.minute?" "+g.minute+"'":''}`).join(', ')}</span>
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${g2.map(g=>`${g.name||'?'}${g.minute?" "+g.minute+"'":''}`).join(', ')} ⚽</span>
-    </div>`:'';
-  const groundHtml=m.ground
-    ?`<div style="grid-column:1/-1;font-size:12px;color:rgba(244,236,200,.28);text-align:center;padding:.05rem 0 .1rem;border-top:1px solid rgba(232,190,74,.06)">📍 ${m.ground}</div>`:'';
   return`<div class="match-card${isN?' nc':''}${isKO?' kc':''}" data-midx="${idx}">
     <div class="ts">${flagEl(t1)}<span class="tn${t1==='Norway'?' no':''}">${tn(t1)}</span></div>
     <div class="mc">${ctr}${badge}<div class="mr">${lbl}</div></div>
     <div class="ts r">${flagEl(t2)}<span class="tn${t2==='Norway'?' no':''}">${tn(t2)}</span></div>
-    ${scorersHtml}${groundHtml}
   </div>`;
 }
 
