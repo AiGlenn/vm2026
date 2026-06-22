@@ -1785,18 +1785,6 @@ async function loadData(){
 }
 loadData();
 
-/* ── Pull-to-refresh for PWA ── */
-(function(){
-  let startY=0,pulling=false;
-  document.addEventListener('touchstart',e=>{if(window.scrollY===0)startY=e.touches[0].clientY},{passive:true});
-  document.addEventListener('touchmove',e=>{
-    if(startY>0&&window.scrollY===0&&e.touches[0].clientY-startY>80)pulling=true;
-  },{passive:true});
-  document.addEventListener('touchend',()=>{
-    if(pulling){pulling=false;startY=0;localStorage.clear();location.reload();}
-    startY=0;
-  });
-})();
 
 /* ── Swipe mellom faner ── */
 (function(){
