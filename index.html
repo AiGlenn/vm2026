@@ -817,7 +817,7 @@ function isLive(m){
     (m.status&&!LIVE_DEAD.has((m.status||'').toLowerCase())&&!m.score?.ft);
 }
 /* ── MATCH CARD HTML ── */
-function matchCardHtml(m){
+function matchCardHtml(m,extraHtml=''){
   const idx=allMatches.indexOf(m),dt=parseDT(m.date,m.time);
   const isN=m.team1==='Norway'||m.team2==='Norway',isKO=!m.group;
   const sc=m.score?.ft,t1=m.team1||'?',t2=m.team2||'?';
@@ -838,6 +838,7 @@ function matchCardHtml(m){
     <div class="ts">${flagEl(t1)}<span class="tn${t1==='Norway'?' no':''}">${tn(t1)}</span></div>
     <div class="mc">${ctr}${badge}<div class="mr">${lbl}</div></div>
     <div class="ts r">${flagEl(t2)}<span class="tn${t2==='Norway'?' no':''}">${tn(t2)}</span></div>
+    ${extraHtml}
   </div>`;
 }
 
@@ -1032,35 +1033,20 @@ function closeModal(){
 function buildNorwayHTML(){
   const nm=allMatches.filter(m=>m.team1==='Norway'||m.team2==='Norway');
   if(!nm.length)return'<span class="c-muted">Ingen Norges-kamper funnet</span>';
-  const nextNm=nm.find(m=>!m.score?.ft&&!isLive(m));
-  let cdHtml='';
-  if(nextNm){
-    const dt=parseDT(nextNm.date,nextNm.time);
-    if(dt){
-      const diff=dt-new Date();
-      if(diff>0){
-        const days=Math.floor(diff/86400000),hrs=Math.floor((diff%86400000)/3600000),mins=Math.floor((diff%3600000)/60000);
-        const cdStr=days>0?`${days}d ${hrs}t ${mins}m`:hrs>0?`${hrs}t ${mins}m`:`${mins}m`;
-        cdHtml=`<div style="text-align:center;font-size:15px;color:rgba(244,236,200,.5);padding:.3rem 0 .45rem">⏱ Neste kamp om ${cdStr}</div>`;
-      }else if(diff>-7200000){
-        cdHtml=`<div style="text-align:center;font-size:15px;color:#f06060;padding:.3rem 0 .45rem"><span class="live-dot" style="width:7px;height:7px;display:inline-block;border-radius:50%;background:#f03030;vertical-align:middle;margin-right:4px"></span>Pågår nå!</div>`;
+  return nm.map(m=>{
+    let extra='';
+    if(!m.score?.ft&&!isLive(m)){
+      const dt=parseDT(m.date,m.time);
+      if(dt){
+        const diff=dt-new Date();
+        if(diff>0){
+          const days=Math.floor(diff/86400000),hrs=Math.floor((diff%86400000)/3600000),mins=Math.floor((diff%3600000)/60000);
+          const cdStr=days>0?`${days}d ${hrs}t ${mins}m`:hrs>0?`${hrs}t ${mins}m`:`${mins}m`;
+          extra=`<div style="grid-column:1/-1;font-size:14px;color:rgba(244,236,200,.48);text-align:center;padding:.18rem 0 .08rem;border-top:1px solid rgba(232,190,74,.1)">⏱ om ${cdStr}</div>`;
+        }
       }
     }
-  }
-  return cdHtml+nm.map(m=>{
-    const idx=allMatches.indexOf(m),dt=parseDT(m.date,m.time),home=m.team1==='Norway',opp=home?m.team2:m.team1;
-    const sc=m.score?.ft;
-    let res='',cls='c-muted';
-    if(sc){const[g1,g2]=sc,ng=home?g1:g2,og=home?g2:g1;
-      if(ng>og){cls='c-win';res=`Vant ${g1}–${g2} ✓`}
-      else if(ng<og){cls='c-loss';res=`Tapte ${g1}–${g2}`}
-      else{cls='c-draw';res=`Uavgjort ${g1}–${g2}`}
-    }else res=dt?`${fmtShort(dt)} kl.${fmtTime(dt)}`:'TBD';
-    return`<div class="norge-mini" data-midx="${idx}" style="cursor:pointer">
-      <div class="mini-date">${fmtShort(dt)||'TBD'}</div>
-      <div class="mini-teams">${flagEl('Norway','sm')} Norge – ${flagEl(opp,'sm')} ${tn(opp)}</div>
-      <div class="mini-res ${cls}">${res}</div>
-    </div>`;
+    return matchCardHtml(m,extra);
   }).join('');
 }
 
@@ -1095,7 +1081,7 @@ function renderForside(){
     <div class="group-header" style="display:flex;align-items:center;gap:.5rem">
       <img src="flags/no.png" alt="" class="flag-img-sm"> HEIA NORGE! — GRUPPE I <img src="flags/no.png" alt="" class="flag-img-sm">
     </div>
-    <div style="padding:.55rem .65rem"><div class="norge-grid">${buildNorwayHTML()}</div></div>
+    <div style="padding:.3rem .4rem .05rem">${buildNorwayHTML()}</div>
   </div>`;
 
   el.innerHTML=liveHtml+nextHtml+lastHtml+norgeHtml+`<div style="margin-top:1.25rem">${buildGrupperHTML()}</div>`;
