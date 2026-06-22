@@ -944,8 +944,6 @@ function buildSDBSection(ev,m){
   const stats=[];
   const spec=ev.intSpectators?parseInt(ev.intSpectators):0;
   if(spec>0)stats.push(`👥 ${spec.toLocaleString('nb-NO')}`);
-  const venue=ev.strVenue||(m.ground||'');
-  if(venue)stats.push(`🏟 ${escHtml(venue)}`);
   if(stats.length)html+=`<div class="sdb-stats">${stats.join(' · ')}</div>`;
   if(ev.strResult){
     const paras=ev.strResult.replace(/\r\n/g,'\n').split('\n\n').filter(Boolean);
