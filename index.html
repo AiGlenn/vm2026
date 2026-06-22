@@ -750,6 +750,35 @@ const ZCFG={
   fire:{cols:3,minH:190,max:10,showName:true, offset:false,hdr:false},
 };
 
+/* ── STADIUM NAME MAP ── */
+const GROUND_MAP=[
+  ['Foxborough',      'Gillette Stadium, Foxborough'],
+  ['East Rutherford', 'MetLife Stadium, East Rutherford'],
+  ['Inglewood',       'SoFi Stadium, Inglewood'],
+  ['Arlington',       'AT&T Stadium, Arlington'],
+  ['Santa Clara',     "Levi's Stadium, Santa Clara"],
+  ['Kansas City',     'Arrowhead Stadium, Kansas City'],
+  ['Philadelphia',    'Lincoln Financial Field, Philadelphia'],
+  ['Miami',           'Hard Rock Stadium, Miami Gardens'],
+  ['Atlanta',         'Mercedes-Benz Stadium, Atlanta'],
+  ['Charlotte',       'Bank of America Stadium, Charlotte'],
+  ['Seattle',         'Lumen Field, Seattle'],
+  ['Houston',         'NRG Stadium, Houston'],
+  ['Vancouver',       'BC Place, Vancouver'],
+  ['Toronto',         'BMO Field, Toronto'],
+  ['Montreal',        'Stade de Saputo, Montréal'],
+  ['Mexico City',     'Estadio Azteca, Mexico City'],
+  ['Ciudad de M',     'Estadio Azteca, Mexico City'],
+  ['Guadalajara',     'Estadio Akron, Guadalajara'],
+  ['Monterrey',       'Estadio BBVA, Monterrey'],
+];
+function resolveGround(g){
+  if(!g)return'';
+  const gl=g.toLowerCase();
+  for(const[k,v]of GROUND_MAP)if(gl.includes(k.toLowerCase()))return v;
+  return g;
+}
+
 /* ── STATE ── */
 let allMatches=[],liveMatches=[],liveInterval=null,currentView='forside',currentStatus='idag',currentGroup='alle',currentZoom='fire',currentModalIdx=-1;
 
@@ -944,8 +973,6 @@ function buildSDBSection(ev,m){
   if(!ev)return'';
   let html='<div class="sdb-section">';
   const stats=[];
-  const spec=ev.intSpectators?parseInt(ev.intSpectators):0;
-  if(spec>0)stats.push(`👥 ${spec.toLocaleString('nb-NO')}`);
   if(stats.length)html+=`<div class="sdb-stats">${stats.join(' · ')}</div>`;
   if(ev.strResult){
     const paras=ev.strResult.replace(/\r\n/g,'\n').split('\n\n').filter(Boolean);
@@ -986,7 +1013,7 @@ function openModal(idx){
     <div style="padding-right:3rem">
       <div class="modal-badge">${lbl}</div>
       <div class="modal-meta">${dt?fmtLong(dt):(m.date||'?')} · ${dt?fmtTime(dt):'TBD'}</div>
-      ${m.ground?`<div class="modal-venue">📍 ${m.ground}</div>`:''}
+      ${m.ground?`<div class="modal-venue">📍 ${resolveGround(m.ground)}<span id="modal-venue-spec"></span></div>`:''}
     </div>
     <div class="modal-score-area">
       <div class="modal-team-col${w1?' win':''}">
@@ -1012,6 +1039,10 @@ function openModal(idx){
   if(fin||live){
     if(fin)fetchSDBMatch(idx).then(ev=>{
       if(currentModalIdx!==idx)return;
+      if(ev?.intSpectators){
+        const sp=document.getElementById('modal-venue-spec');
+        if(sp)sp.textContent=` · 👥 ${parseInt(ev.intSpectators).toLocaleString('nb-NO')}`;
+      }
       const el=document.getElementById('modal-sdb-sect');
       if(el){const h=buildSDBSection(ev,m);el.outerHTML=h||''}
     }).catch(()=>{
