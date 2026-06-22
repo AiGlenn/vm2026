@@ -554,11 +554,12 @@ function mapWCMatch(raw){
   const time=d?`${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')} UTC+0`:'';
   return{_wcId:raw.id,date:utcDate,time,team1:raw.team1,team2:raw.team2,
     group:raw.group||null,round:raw.round||null,ground:raw.ground||null,
-    status:raw.status,live_minute:raw.live_minute||null,score:ft?{ft}:null};
+    status:raw.status,live_minute:raw.live_minute||null,score:ft?{ft}:null,
+    goals1:raw.goals1||[],goals2:raw.goals2||[]};
 }
 
 async function fetchWCMatchDetail(wcId,m,midx){
-  const ttl=m.score?.ft?Number.MAX_SAFE_INTEGER:2*60*1000;
+  const ttl=(m.score?.ft&&!isLive(m))?Number.MAX_SAFE_INTEGER:2*60*1000;
   let detail=cacheGet('wc_m_'+wcId,ttl);
   if(!detail){
     try{
@@ -832,10 +833,19 @@ function matchCardHtml(m){
   const badge=live
     ?`<span class="mb" style="background:rgba(200,0,0,.25);color:#f04040;border:1px solid #c03030"><span class="live-dot" style="width:6px;height:6px;display:inline-block;vertical-align:middle;margin-right:3px"></span>LIVE</span>`
     :`<span class="mb ${bc}">${bt}</span>`;
+  const g1=m.goals1||[],g2=m.goals2||[];
+  const scorersHtml=(g1.length||g2.length)&&fin
+    ?`<div style="grid-column:1/-1;display:flex;justify-content:space-between;font-size:13px;color:rgba(244,236,200,.38);padding:.12rem .1rem .05rem;border-top:1px solid rgba(232,190,74,.08);gap:.4rem;overflow:hidden">
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">⚽ ${g1.map(g=>`${g.name||'?'}${g.minute?" "+g.minute+"'":''}`).join(', ')}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${g2.map(g=>`${g.name||'?'}${g.minute?" "+g.minute+"'":''}`).join(', ')} ⚽</span>
+    </div>`:'';
+  const groundHtml=m.ground
+    ?`<div style="grid-column:1/-1;font-size:12px;color:rgba(244,236,200,.28);text-align:center;padding:.05rem 0 .1rem;border-top:1px solid rgba(232,190,74,.06)">📍 ${m.ground}</div>`:'';
   return`<div class="match-card${isN?' nc':''}${isKO?' kc':''}" data-midx="${idx}">
     <div class="ts">${flagEl(t1)}<span class="tn${t1==='Norway'?' no':''}">${tn(t1)}</span></div>
     <div class="mc">${ctr}${badge}<div class="mr">${lbl}</div></div>
     <div class="ts r">${flagEl(t2)}<span class="tn${t2==='Norway'?' no':''}">${tn(t2)}</span></div>
+    ${scorersHtml}${groundHtml}
   </div>`;
 }
 
@@ -962,15 +972,22 @@ function openModal(idx){
   const dt=parseDT(m.date,m.time);
   const sc=m.score?.ft,ht=m.score?.ht;
   const t1=m.team1||'?',t2=m.team2||'?';
-  const fin=!!sc,tod=!fin&&isMatchToday(m);
+  const live=isLive(m);
+  const fin=!!sc&&!live,tod=!fin&&!live&&isMatchToday(m);
   const lbl=m.group?(GROUP_NO[m.group]||m.group):(ROUND_NO[m.round]||m.round||'');
   const w1=sc&&sc[0]>sc[1],w2=sc&&sc[1]>sc[0];
-  const evHtml=fin?buildEventsHTML(m):'';
+  const evHtml=(fin||live)?buildEventsHTML(m):'';
   const htHtml=ht?`<div class="modal-ht">HT: ${ht[0]}–${ht[1]}</div>`:'';
-  const statusHtml=fin?`<div class="modal-status fin">✓ Ferdig</div>`:
-    tod?`<div class="modal-status tod">I dag</div>`:
-    dt?`<div class="modal-stime">${fmtTime(dt)}</div>`:'';
-  const scoreCenter=fin
+  const minRaw=live?(m.live_minute||(m.status==='HT'?'HT':m.status)):null;
+  const minStr=minRaw?`${minRaw}${/^\d+$/.test(String(minRaw))?"'":''}`:null;
+  const statusHtml=live
+    ?`<div class="modal-status" style="color:#f04040;display:flex;align-items:center;gap:5px;justify-content:center"><span class="live-dot" style="width:8px;height:8px;border-radius:50%;background:#f03030;flex-shrink:0"></span>LIVE${minStr?' · '+minStr:''}</div>`
+    :fin?`<div class="modal-status fin">✓ Ferdig</div>`
+    :tod?`<div class="modal-status tod">I dag</div>`
+    :dt?`<div class="modal-stime">${fmtTime(dt)}</div>`:'';
+  const scoreCenter=live
+    ?`<div class="modal-ft">${sc?sc[0]:'–'} – ${sc?sc[1]:'–'}</div>${htHtml}${statusHtml}`
+    :fin
     ?`<div class="modal-ft">${sc[0]} – ${sc[1]}</div>${htHtml}${statusHtml}`
     :`<div class="modal-vs">VS</div>${statusHtml}`;
 
@@ -1001,8 +1018,8 @@ function openModal(idx){
   document.getElementById('matchModal').style.display='flex';
   document.body.style.overflow='hidden';
 
-  if(fin){
-    fetchSDBMatch(idx).then(ev=>{
+  if(fin||live){
+    if(fin)fetchSDBMatch(idx).then(ev=>{
       if(currentModalIdx!==idx)return;
       const el=document.getElementById('modal-sdb-sect');
       if(el){const h=buildSDBSection(ev,m);el.outerHTML=h||''}
@@ -1025,7 +1042,22 @@ function closeModal(){
 function buildNorwayHTML(){
   const nm=allMatches.filter(m=>m.team1==='Norway'||m.team2==='Norway');
   if(!nm.length)return'<span class="c-muted">Ingen Norges-kamper funnet</span>';
-  return nm.map(m=>{
+  const nextNm=nm.find(m=>!m.score?.ft&&!isLive(m));
+  let cdHtml='';
+  if(nextNm){
+    const dt=parseDT(nextNm.date,nextNm.time);
+    if(dt){
+      const diff=dt-new Date();
+      if(diff>0){
+        const days=Math.floor(diff/86400000),hrs=Math.floor((diff%86400000)/3600000),mins=Math.floor((diff%3600000)/60000);
+        const cdStr=days>0?`${days}d ${hrs}t ${mins}m`:hrs>0?`${hrs}t ${mins}m`:`${mins}m`;
+        cdHtml=`<div style="text-align:center;font-size:15px;color:rgba(244,236,200,.5);padding:.3rem 0 .45rem">⏱ Neste kamp om ${cdStr}</div>`;
+      }else if(diff>-7200000){
+        cdHtml=`<div style="text-align:center;font-size:15px;color:#f06060;padding:.3rem 0 .45rem"><span class="live-dot" style="width:7px;height:7px;display:inline-block;border-radius:50%;background:#f03030;vertical-align:middle;margin-right:4px"></span>Pågår nå!</div>`;
+      }
+    }
+  }
+  return cdHtml+nm.map(m=>{
     const idx=allMatches.indexOf(m),dt=parseDT(m.date,m.time),home=m.team1==='Norway',opp=home?m.team2:m.team1;
     const sc=m.score?.ft;
     let res='',cls='c-muted';
@@ -1758,6 +1790,26 @@ loadData();
     startY=0;
   });
 })();
+
+/* ── Swipe mellom faner ── */
+(function(){
+  const VIEWS=['forside','kamper','kalender','grupper','sluttspill','statistikk'];
+  let sx=0,sy=0;
+  document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+  document.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-sx;
+    const dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)<55||Math.abs(dy)>Math.abs(dx)*0.65)return;
+    if(document.getElementById('matchModal').style.display!=='none')return;
+    if(document.getElementById('teamModal').style.display!=='none')return;
+    const i=VIEWS.indexOf(currentView);if(i===-1)return;
+    const ni=dx<0?Math.min(i+1,VIEWS.length-1):Math.max(i-1,0);
+    if(ni!==i)showView(VIEWS[ni]);
+  },{passive:true});
+})();
+
+/* ── Service Worker ── */
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js');
 </script>
 </body>
 </html>
