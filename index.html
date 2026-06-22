@@ -389,7 +389,7 @@
     @media(max-width:767px){
       .view-nav{display:none}
       body{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
-      #matchModal,#teamModal{padding-top:calc(env(safe-area-inset-top) + 2rem);padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+      #matchModal,#teamModal{padding-top:calc(env(safe-area-inset-top) + 4rem);padding-bottom:calc(100px + env(safe-area-inset-bottom))}
       #mobNav{
         display:flex;position:fixed;bottom:0;left:0;right:0;z-index:600;
         background:#111e0e;
@@ -1735,7 +1735,7 @@ function openTeamModal(name){
   }
 
   const matchesHtml=teamMatches.length
-    ?`<div class="ev-section"><div class="ev-hdr">Kamper</div>${teamMatches.map(matchCardHtml).join('')}</div>`:'';
+    ?`<div class="ev-section"><div class="ev-hdr">Kamper</div>${teamMatches.map(m=>matchCardHtml(m)).join('')}</div>`:'';
 
   const squadHtml=sq
     ?`<div class="swos-section"><div class="ev-hdr">SWOS 2026 – TROPP</div><div class="swos-squad-panel"><div class="swos-squad-list">${sq.map((p,i)=>swosSquadRow(p,i+1,name)).join('')}</div></div></div>`:'';
