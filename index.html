@@ -196,12 +196,20 @@
     .ev-min{font-family:'Press Start 2P',monospace;font-size:7px;color:rgba(244,236,200,.4);padding-left:.3rem}
     .ev-none{font-size:15px;color:rgba(244,236,200,.3);padding:.3rem 0}
 
-    /* Match report (TheSportsDB) */
-    .sdb-section{margin-top:.8rem;border-top:1px solid rgba(232,190,74,.2);padding-top:.7rem}
-    .sdb-stats{font-size:15px;color:rgba(244,236,200,.55);margin-bottom:.35rem}
-    .sdb-report{font-size:16px;color:rgba(244,236,200,.78);line-height:1.6;margin:.5rem 0}
-    .sdb-link{color:#f6d45a;font-size:16px;text-decoration:underline;text-underline-offset:2px}
-    .sdb-loading{font-size:15px;color:rgba(244,236,200,.3);padding:.5rem 0;margin-top:.8rem;border-top:1px solid rgba(232,190,74,.2)}
+    .nrk-thumb-wrap{margin-top:.9rem;border-top:1px solid rgba(232,190,74,.2);padding-top:.7rem}
+    .nrk-thumb{display:block;position:relative;cursor:pointer;text-decoration:none}
+    .nrk-thumb img{width:100%;display:block;border:2px solid rgba(232,190,74,.25);image-rendering:auto}
+    .nrk-thumb-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,.35)}
+    .nrk-thumb:hover .nrk-thumb-play{background:rgba(0,0,0,.2)}
+    .nrk-thumb-play-icon{width:54px;height:54px;background:#f6d45a;
+      display:flex;align-items:center;justify-content:center;
+      border:3px solid #2a1c00;box-shadow:5px 5px 0 #2a1c00;
+      font-family:'Press Start 2P',monospace;font-size:20px;color:#2a1c00;
+      padding-left:4px;line-height:1;image-rendering:pixelated}
+    .nrk-thumb:hover .nrk-thumb-play-icon{transform:translate(3px,3px);box-shadow:2px 2px 0 #2a1c00}
+    .nrk-thumb-lbl{font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(246,212,90,.7);
+      text-align:center;margin-top:.45rem;letter-spacing:.05em}
 
     /* ═══════════════════════════════
        KALENDER
@@ -581,8 +589,7 @@
   <div id="vStatistikk"                     style="display:none"></div>
   <footer>
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
-    &nbsp;·&nbsp; Kamprapporter: <a href="https://www.thesportsdb.com" target="_blank">TheSportsDB</a>
-    &nbsp;·&nbsp; * Kamper 00–07 vises dagen før i kalender
+    &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
   </footer>
 </div>
@@ -598,18 +605,52 @@
 <script src="swos-players.js"></script>
 <script src="espn-data.js"></script>
 <script>
-const SDB_BASE='https://www.thesportsdb.com/api/v1/json/3';
-
 /* ── CACHE ── */
 function cacheGet(key,ttl){try{const r=localStorage.getItem(key);if(!r)return null;const o=JSON.parse(r);return Date.now()-o.ts<ttl?o.d:null}catch{return null}}
 function cacheSet(key,d){try{localStorage.setItem(key,JSON.stringify({ts:Date.now(),d}))}catch{}}
-// Clear legacy wcup2026.org cache keys
-try{['wc_all','wc_scorers'].forEach(k=>localStorage.removeItem(k));
-  for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&(k.startsWith('wc_m_')||k.startsWith('espn_all_v1')))localStorage.removeItem(k)}}catch{}
 
 /* ── ESPN: match schedule ── */
 const ESPN_CANONICAL={'Bosnia-Herzegovina':'Bosnia & Herzegovina','Congo DR':'DR Congo','Czechia':'Czech Republic'};
 function espnTeamCanonical(n){return ESPN_CANONICAL[n]||n}
+
+/* ── NRK Høydepunkter ── */
+const NRK_NO_ESPN={'Brasil':'Brazil','Marokko':'Morocco','Skottland':'Scotland','Tyrkia':'Türkiye','Nederland':'Netherlands','Elfenbenskysten':'Ivory Coast','Belgia':'Belgium','Frankrike':'France','Irak':'Iraq','Norge':'Norway','Østerrike':'Austria','Kroatia':'Croatia','Usbekistan':'Uzbekistan','Sveits':'Switzerland','DR Kongo':'DR Congo','Tyskland':'Germany','Sverige':'Sweden','Algerie':'Algeria','USA':'United States','Bosnia-Hercegovina':'Bosnia & Herzegovina'};
+function nrkToEspn(n){return NRK_NO_ESPN[n]||n}
+// [prfId, imageUrl600px]
+const NRK_HIGHLIGHTS={'Algeria+Argentina':['ISPO40561926','https://gfx.nrk.no/5tpY4nbeLynhp_DyBHueRwKIkEqu8T4b0fEf7Ch7Xuxg'],'Algeria+Austria':['ISPO40567126','https://gfx.nrk.no/zAy6ACRPcNTJCCbWHGOSpwtn5zyjEDT79unwAGpphRYA'],'Algeria+Jordan':['ISPO40564426','https://gfx.nrk.no/gTB9_AF9MZQO69zWAwHrwwx0dwG7S1gfJ8lujtskZ3hA'],'Argentina+Austria':['ISPO40564126','https://gfx.nrk.no/xOwBKSTGBtPLiJKtD_XjPw7bsGuaZTg19R1CIFyC9ILg'],'Argentina+Jordan':['ISPO40567226','https://gfx.nrk.no/iYsC-VuXAvHrqQoC2JOfwwd64bje1LprDoHczFialG4w'],'Australia+Paraguay':['ISPO40566026','https://gfx.nrk.no/iH4QlN82LB-0QNZn0fFJQQbQDcQhIKuG40ayuI1G_vjQ'],'Australia+Türkiye':['ISPO40560826','https://gfx.nrk.no/9-UczrZotUQd_VSbzwlJpwdE501bTDSo4no-83ciI3zg'],'Australia+United States':['ISPO40562926','https://gfx.nrk.no/1aTvZ1hEuABdvbG_vom2mAK9duJBH749DyCLxFi8A4Sg'],'Austria+Jordan':['ISPO40562026','https://gfx.nrk.no/azxxKHnOR0UT2F9QnHKGgwE4mYI3J_aIkcveeKDrE7rQ'],'Belgium+Egypt':['ISPO40561426','https://gfx.nrk.no/BZJtjp5nmnyzeayq8KtjyAaQYWauX8G93lrbsmEKk5Hw'],'Belgium+Iran':['ISPO40563826','https://gfx.nrk.no/Zdek8q26ueufLtUS9gpdXQmmlhYVb2zCgWs-zzsdgwMQ'],'Belgium+New Zealand':['ISPO40566626','https://gfx.nrk.no/HN13g04thg-h0u3dlAyfKQf5MAHp6zeA8CeNDP-mYXXg'],'Bosnia & Herzegovina+Canada':['ISPO40560326','https://gfx.nrk.no/AtnaJ7jztvS7hG2Ko0D-wAMqqD1WrXf-WumSIz94Uzbw'],'Bosnia & Herzegovina+Switzerland':['ISPO40562626','https://gfx.nrk.no/aPJ2UAm68OMx6iClKiSUyA1-nvGpQ1a_1LqVgol6lqkQ'],'Brazil+Haiti':['ISPO40563126','https://gfx.nrk.no/8OXJ4aXW8wqTc4OHDmQi_w5WSRfVwWOUNvThDJvIhpcw'],'Brazil+Morocco':['ISPO40560626','https://gfx.nrk.no/bIlbE4paXwSvf_c0vdtLcgpBCidYpDE_2hDSc57RIlqw'],'Brazil+Scotland':['ISPO40565126','https://gfx.nrk.no/f8IHbUojgXZCGBRTNRve_gUa72fuLDZBxJLNXd8yovkg'],'Canada+Qatar':['ISPO40562726','https://gfx.nrk.no/Z0lFaNGwIvrFwNTrO0ZzvAP1rFUu6M75FApDoC9P-N-g'],'Canada+Switzerland':['ISPO40564926','https://gfx.nrk.no/9RmugnQHFBJRwCzbL9IMbwPOXnMZyV2rvQvEWQB6HBdw'],'Colombia+DR Congo':['ISPO40564826','https://gfx.nrk.no/o98ngfjFIdE8XxhMb-PnOA99Ql9YDKMNJ3doKGpNRz7g'],'Colombia+Portugal':['ISPO40566926','https://gfx.nrk.no/VUAZeHP6VIWe0862-lYfrw3k60Cs7zCAO6xtg6bohv2g'],'Colombia+Uzbekistan':['ISPO40562426','https://gfx.nrk.no/-0ft4wtQv1U-i1XkZQq9nAqRUGuL9rtDe8srd6lXMnMg'],'Croatia+England':['ISPO40562226','https://gfx.nrk.no/ILIGT4mEJDUl2LKWOnAQnw_N5Rt3ycIt_5WiTrWsn-xg'],'Croatia+Ghana':['ISPO40566826','https://gfx.nrk.no/mzTZmnMr8BdCIGpq_klbmAAXVBC64jXZbKeCAf31mapg'],'Curaçao+Ecuador':['ISPO40563526','https://gfx.nrk.no/brT1qqvM1m4asLNso4k_pg6w3xI2h9mXqCgZl5ZkKc7w'],'DR Congo+Portugal':['ISPO40562126','https://gfx.nrk.no/Z--hzG14bEDA8nBvtRWRRQJfaDSRpYdRZbovfyU58tuA'],'DR Congo+Uzbekistan':['ISPO40567026','https://gfx.nrk.no/70d_3yaw3oGWlJcA4jdDVgJRMUCdTZwWbdFNIVst3hdQ'],'Ecuador+Germany':['ISPO40565626','https://gfx.nrk.no/g0MYdQg-NmtxcYSxai6wPQfziXFUKOdxaXlIFmmae2Qw'],'Ecuador+Ivory Coast':['ISPO40561126','https://gfx.nrk.no/9-cUP653W5SkNiM8Ftp-hw8E2uklYCzu4-cCLjn23RlA'],'Egypt+Iran':['ISPO40566526','https://gfx.nrk.no/ovrWAqQ4qi6gffO2Fb703wdJXIHYwYNrlKDmSz1MaxNw'],'Egypt+New Zealand':['ISPO40564026','https://gfx.nrk.no/l2UZE7j6Cpr8o9da10QvJA_2-Dy5-FgOcss1eMogasZA'],'England+Ghana':['ISPO40564626','https://gfx.nrk.no/B7wygh9wgmkRTQVZCFv4Eg7kYTOtRG6wUNVtI6VqyT9A'],'England+Panama':['ISPO40566726','https://gfx.nrk.no/iSxF8yS8nK1s-q_Cht2dkgTD40Bf5JCjegV0zpmuV4JA'],'France+Iraq':['ISPO40564226','https://gfx.nrk.no/jD7e8ey9P3ScX0oMcW3SOgAKXG6LI5zlfcQN_8TICosA'],'France+Norway':['ISPO40566126','https://gfx.nrk.no/dc-8I1v7iZlkEWz9A88Z5QWK-mbFx73rS0k1AWiymsRw'],'France+Senegal':['ISPO40561726','https://gfx.nrk.no/rhePtbEMdXIZ7w_zWfcNKAVFiAax6tYwMHQEB7_19NaQ'],'Ghana+Panama':['ISPO40562326','https://gfx.nrk.no/hiw-_AnqIAov9ki8Bn1StQtxLaOlediuiE1dSITk4V6Q'],'Haiti+Morocco':['ISPO40565226','https://gfx.nrk.no/cvqUT601DSILtrijaqEWHQ_rslu-0-T7dDEgs5Vh9Xig'],'Haiti+Scotland':['ISPO40560726','https://gfx.nrk.no/4tNK8asyT4-DDq8JA1N_LA877iqbi5DHb7dcB02mCY3g'],'Iran+New Zealand':['ISPO40561626','https://gfx.nrk.no/QhcUNxeyFUlcBrCFQCAHWgG8qu5whhDmRvll_Ud3UgSw'],'Iraq+Norway':['ISPO40561826','https://gfx.nrk.no/24-iRyRAOSWe_XOPMmyedwDwCGLcs8XEwGoBvMJAfhnQ'],'Iraq+Senegal':['ISPO40566226','https://gfx.nrk.no/8bLFX8NybcFgP_aRo6JeMgaDpRkSxplZOrgombOywoIw'],'Japan+Netherlands':['ISPO40561026','https://gfx.nrk.no/xaRJcdlJbDsILDyFiXITnQW6Br4SL0hDD3aiVZP_rTmA'],'Japan+Sweden':['ISPO40565826','https://gfx.nrk.no/8pKOLgnPK5ANHbtoJn13LQ8oDUWDYR04_NbIIrNSArpg'],'Japan+Tunisia':['ISPO40563626','https://gfx.nrk.no/th0aX3qxius4qyaroYKYvAy0CyGjfJlw9vQWvHD-Yf9g'],'Norway+Senegal':['ISPO40564326','https://gfx.nrk.no/9k3pHankodQlmxCUYfbtqwHH-XV2ehYaGEU-xX-FogUQ']};
+let nrkExtra={};
+function getNRKData(m){
+  const key=[m.team1,m.team2].sort().join('+');
+  const s=NRK_HIGHLIGHTS[key];if(s)return{id:s[0],img:s[1]};
+  const dyn=cacheGet('nrk_hl_v2',3600*1000);
+  if(dyn&&dyn[key])return dyn[key];
+  return null;
+}
+async function fetchNRKHighlights(){
+  const cached=cacheGet('nrk_hl_v2',3600*1000);
+  if(cached){nrkExtra=cached;return}
+  try{
+    const r=await fetch('https://psapi.nrk.no/tv/catalog/series/fotball-vm-2026-hoeydepunkter');
+    const d=await r.json();
+    const sids=(d.navigation?.sections?.[1]?.sections||[]).map(s=>s.id);
+    const map={};
+    await Promise.allSettled(sids.map(async sid=>{
+      try{
+        const sr=await fetch(`https://psapi.nrk.no/tv/catalog/series/fotball-vm-2026-hoeydepunkter/seasons/${sid}`);
+        const sd=await sr.json();
+        for(const ep of sd._embedded?.instalments||[]){
+          const pts=(ep.titles?.title||'').split('–');
+          if(pts.length===2){
+            const k=[nrkToEspn(pts[0].trim()),nrkToEspn(pts[1].trim())].sort().join('+');
+            const img=(ep.image||[]).find(i=>i.width===600)?.url||(ep.image||[])[0]?.url||'';
+            map[k]={id:ep.prfId,img};
+          }
+        }
+      }catch{}
+    }));
+    if(Object.keys(map).length){nrkExtra=map;cacheSet('nrk_hl_v2',map);}
+  }catch{}
+}
 
 const SLUG_TO_ROUND={'round-of-32':'Round of 32','round-of-16':'Round of 16',
   'quarterfinals':'Quarterfinals','semifinals':'Semifinals',
@@ -781,21 +822,12 @@ const TEAM_NO={
   'Iceland':'Island','Finland':'Finland','Denmark':'Danmark','Italy':'Italia',
   'Albania':'Albania','Armenia':'Armenia','Slovakia':'Slovakia','Hungary':'Ungarn',
 };
-/* TheSportsDB uses English names – these override when searching */
-const SDB_NAME={
-  'United States':'USA','Bosnia & Herzegovina':'Bosnia and Herzegovina',
-  "Cote d'Ivoire":'Ivory Coast','DR Congo':'DR Congo',
-  'Democratic Republic of the Congo':'DR Congo',
-};
 const GROUP_NO={'Group A':'Gr. A','Group B':'Gr. B','Group C':'Gr. C','Group D':'Gr. D',
   'Group E':'Gr. E','Group F':'Gr. F','Group G':'Gr. G','Group H':'Gr. H',
   'Group I':'Gr. I','Group J':'Gr. J','Group K':'Gr. K','Group L':'Gr. L'};
 const ROUND_NO={'Round of 32':'Runde 32','Round of 16':'Runde 16',
-  'Quarter-final':'Kvartfinale','Quarter-finals':'Kvartfinale','Quarterfinals':'Kvartfinale','Quarterfinal':'Kvartfinale',
-  'Semi-final':'Semifinale','Semi-finals':'Semifinale','Semifinals':'Semifinale','Semifinal':'Semifinale',
-  'Match for third place':'Bronsefinale','3rd Place':'Bronsefinale','3rd Place Game':'Bronsefinale','Third Place':'Bronsefinale',
-  'Final':'Finale'};
-const ROUND_ORDER=['Round of 32','Round of 16','Quarter-final','Quarterfinals','Semi-final','Semifinals','Match for third place','3rd Place','3rd Place Game','Final'];
+  'Quarterfinals':'Kvartfinale','Semifinals':'Semifinale','3rd Place':'Bronsefinale','Final':'Finale'};
+const ROUND_ORDER=['Round of 32','Round of 16','Quarterfinals','Semifinals','3rd Place','Final'];
 const WEEKDAYS_NO=['Sø','Ma','Ti','On','To','Fr','Lø'];
 const WEEKDAYS_FULL=['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
 const MONTHS_NO=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
@@ -839,7 +871,6 @@ let allMatches=[],liveMatches=[],liveInterval=null,currentView='forside',current
 /* ── HELPERS ── */
 function tn(t){return TEAM_NO[t]||t||'?'}
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):''}
-function sdbName(t){return SDB_NAME[t]||t}
 
 function flagEl(t,sz){
   const c=FLAG_FILE[t];
@@ -883,6 +914,7 @@ function calDate(m){
   if(h!==null&&h<7){const p=new Date(d+'T12:00:00');p.setDate(p.getDate()-1);return p.toISOString().slice(0,10)}
   return d||m.date||'';
 }
+const byTime=(a,b)=>{const da=parseDT(a.date,a.time),db=parseDT(b.date,b.time);return(da?da.getTime():0)-(db?db.getTime():0)};
 function isMatchToday(m){return calDate(m)===calToday()}
 
 /* ── FILTERS ── */
@@ -1022,48 +1054,6 @@ function buildEventsHTML(m){
   return html+`</div>`;
 }
 
-/* ── TheSportsDB: match metadata (report, attendance, video) ── */
-const sdbCache={};
-async function fetchSDBMatch(midx){
-  if(midx in sdbCache)return sdbCache[midx];
-  const m=allMatches[midx];if(!m){sdbCache[midx]=null;return null}
-  const n1=sdbName(m.team1),n2=sdbName(m.team2);
-  for(const[a,b] of[[n1,n2],[n2,n1]]){
-    try{
-      const ctrl=new AbortController();
-      const tid=setTimeout(()=>ctrl.abort(),8000);
-      const url=`${SDB_BASE}/searchevents.php?e=${encodeURIComponent(a+' vs '+b)}`;
-      const res=await fetch(url,{signal:ctrl.signal});
-      clearTimeout(tid);
-      if(!res.ok)continue;
-      const data=await res.json();
-      const evts=data.event||[];
-      if(!evts.length)continue;
-      const target=new Date(m.date+'T12:00:00Z').getTime();
-      const ev=evts.find(e=>e.dateEvent&&Math.abs(new Date(e.dateEvent+'T12:00:00Z').getTime()-target)<3*86400000)||evts[0];
-      if(!ev)continue;
-      sdbCache[midx]=ev;return ev;
-    }catch{/* timeout or network */}
-  }
-  sdbCache[midx]=null;return null;
-}
-
-function escHtml(s){return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''}
-
-function buildSDBSection(ev,m){
-  if(!ev)return'';
-  let html='<div class="sdb-section">';
-  const stats=[];
-  if(stats.length)html+=`<div class="sdb-stats">${stats.join(' · ')}</div>`;
-  if(ev.strResult){
-    const paras=ev.strResult.replace(/\r\n/g,'\n').split('\n\n').filter(Boolean);
-    html+=`<div class="ev-hdr" style="margin-top:.55rem">Kamprapport</div>`;
-    html+=`<div class="sdb-report">${escHtml(paras[0]||'')}</div>`;
-  }
-  if(ev.strVideo)html+=`<div style="margin-top:.5rem"><a class="sdb-link" href="${ev.strVideo}" target="_blank" rel="noopener">▶ Høydepunkter på YouTube</a></div>`;
-  return html+'</div>';
-}
-
 /* ── Open modal ── */
 function openModal(idx){
   const m=allMatches[idx];if(!m)return;
@@ -1110,7 +1100,7 @@ function openModal(idx){
       </div>
     </div>
     ${evHtml}
-    ${fin?`<div id="modal-stats-sect"></div><div id="modal-sdb-sect" class="sdb-loading"><span class="ldots">Henter kampdata</span></div>`:''}`;
+    ${fin?(()=>{const nd=getNRKData(m);return`<div id="modal-stats-sect"></div>`+(nd?`<div class="nrk-thumb-wrap"><a class="nrk-thumb" href="https://tv.nrk.no/program/${nd.id}" target="_blank" rel="noopener"><img src="${nd.img}" alt="Høydepunkter" loading="lazy"><div class="nrk-thumb-play"><div class="nrk-thumb-play-icon">▶</div></div></a><div class="nrk-thumb-lbl">HØYDEPUNKTER PÅ NRK</div></div>`:'')})():''}`;
 
   document.getElementById('matchModal').style.zIndex='510';
   document.getElementById('teamModal').style.zIndex='502';
@@ -1119,19 +1109,6 @@ function openModal(idx){
 
   if(fin||live){
     loadESPNMatchEvents(m,idx);
-    if(fin)fetchSDBMatch(idx).then(ev=>{
-      if(currentModalIdx!==idx)return;
-      if(ev?.intSpectators){
-        const sp=document.getElementById('modal-venue-spec');
-        if(sp)sp.textContent=` · 👥 ${parseInt(ev.intSpectators).toLocaleString('nb-NO')}`;
-      }
-      const el=document.getElementById('modal-sdb-sect');
-      if(el){const h=buildSDBSection(ev,m);el.outerHTML=h||''}
-    }).catch(()=>{
-      if(currentModalIdx!==idx)return;
-      const el=document.getElementById('modal-sdb-sect');
-      if(el)el.outerHTML='';
-    });
   }
 }
 function closeModal(){
@@ -1165,7 +1142,6 @@ function buildNorwayHTML(){
 /* ══ RENDER: FORSIDE ══ */
 function renderForside(){
   const el=document.getElementById('vForside');
-  const byTime=(a,b)=>{const da=parseDT(a.date,a.time),db=parseDT(b.date,b.time);return(da?da.getTime():0)-(db?db.getTime():0)};
 
   /* Live */
   const liveHtml=buildLiveHTML();
@@ -1201,7 +1177,7 @@ function renderForside(){
 
 /* ══ RENDER: KAMPPROGRAM ══ */
 function renderKampprogram(){
-  const sortedAll=[...allMatches].sort((a,b)=>{const da=parseDT(a.date,a.time),db=parseDT(b.date,b.time);return(da?da.getTime():0)-(db?db.getTime():0)});
+  const sortedAll=[...allMatches].sort(byTime);
   const matches=applyFilters(sortedAll);
   const el=document.getElementById('vKampprogram');
   if(!matches.length){
@@ -1229,7 +1205,7 @@ function renderKalender(){
     if(offset){let sd=first.getDay();sd=sd===0?6:sd-1;for(let i=0;i<sd;i++)html+=`<div class="cal-day empty" style="min-height:${minH}px"></div>`}
     for(let d=1;d<=last.getDate();d++){
       const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const dm=(dmap.get(ds)||[]).slice().sort((a,b)=>{const ta=parseDT(a.date,a.time),tb=parseDT(b.date,b.time);return(ta?ta.getTime():0)-(tb?tb.getTime():0)});
+      const dm=(dmap.get(ds)||[]).slice().sort(byTime);
       const isTod=ds===today,di=new Date(yr,mo,d).getDay();
       const numLbl=hdr?`${d}${isTod?' ◀':''}`
         :cols===4?`${WEEKDAYS_NO[di]} ${d}.${isTod?' ◀':''}`
@@ -2012,9 +1988,6 @@ async function loadESPNMatchEvents(m,idx){
 }
 
 /* ══ TEAM MODAL ══ */
-function swosDisplayName(n){
-  return n.split(' ').map(w=>w.charAt(0)+w.slice(1).toLowerCase()).join(' ');
-}
 
 /* Fuzzy stat lookup: normalize accents, then match by full name or surname */
 function normStr(s){return s.replace(/[øØ]/g,'O').replace(/[åÅ]/g,'A').replace(/[æÆ]/g,'AE').replace(/[öÖ]/g,'O').replace(/[üÜ]/g,'U').replace(/[ñÑ]/g,'N').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/-/g,'').toUpperCase().trim()}
@@ -2212,7 +2185,7 @@ async function fetchAllScores(){
   }
   computeGoals();computeAssists();computeCards();
   if(currentView==='forside')renderForside();
-  else if(currentView==='kamper')renderKampprogram();
+  else if(currentView==='kampprogram')renderKampprogram();
   else if(currentView==='grupper')renderGrupper();
   else if(currentView==='sluttspill')renderSluttspill();
   // Background: load goals/cards/subs for all completed matches
@@ -2256,6 +2229,7 @@ async function loadData(){
       document.getElementById('loading').style.display='none';
       showView('forside');
       fetchAllScores(); // background: populate scores
+      fetchNRKHighlights(); // background: check for new NRK episodes
       startLivePolling();
       return;
     }
@@ -2287,7 +2261,7 @@ loadData();
     if(dx>0){
       if(document.getElementById('playerModal').style.display!=='none'){closePlayerModal();return}
       if(document.getElementById('teamModal').style.display!=='none'){closeTeamModal();return}
-      if(document.getElementById('matchModal').style.display!=='none'){closeMatchModal();return}
+      if(document.getElementById('matchModal').style.display!=='none'){closeModal();return}
     }
     if(document.getElementById('matchModal').style.display!=='none')return;
     if(document.getElementById('teamModal').style.display!=='none')return;
