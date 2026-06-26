@@ -2274,10 +2274,22 @@ async function loadData(){
         goals1:[],goals2:[],cards:[],subs:[]
       }));
       allMatches.sort((a,b)=>(a.date+(a.time||''))<(b.date+(b.time||''))?-1:1);
+      // Pre-load cached scoreboards synchronously so scores are visible on first render
+      const _todayDs=new Date().toISOString().slice(0,10).replace(/-/g,'');
+      const _seenDates=new Set();
+      for(const m of allMatches){
+        if(!m.date)continue;
+        const ds=m.date.replace(/-/g,'');
+        if(ds>_todayDs||_seenDates.has(ds))continue;
+        _seenDates.add(ds);
+        const ttl=ds<_todayDs?24*3600*1000:2*60*1000;
+        const cached=cacheGet('espn_sb_'+ds,ttl);
+        if(cached){espnScoreboardCache[ds]=cached;applyScoreboardToMatches(cached);}
+      }
       computeGoals();computeAssists();computeCards();
       document.getElementById('loading').style.display='none';
       showView('forside');
-      fetchAllScores(); // background: populate scores
+      fetchAllScores(); // background: fetch fresh data for today + uncached dates
       fetchNRKHighlights(); // background: check for new NRK episodes
       startLivePolling();
       return;
