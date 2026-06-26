@@ -114,26 +114,26 @@
     /* Match card */
     .match-card{background:linear-gradient(180deg,#2c5625,#214b1f 58%,#19390f);
       border:2px solid #e8be4a;box-shadow:0 0 0 2px #6e4a16,inset 0 0 0 1px rgba(246,212,90,.09),3px 4px 0 rgba(0,0,0,.38);
-      margin-bottom:.35rem;padding:.45rem .8rem;cursor:pointer;
-      display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.4rem;
+      margin-bottom:.35rem;padding:.65rem .7rem .3rem;cursor:pointer;position:relative;
+      display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.35rem;
       transition:transform .08s,box-shadow .08s,filter .08s}
     .match-card.nc{background:linear-gradient(180deg,#5c2525,#4b1a1a 58%,#390f0f)}
     .match-card.kc{border-color:#f6d45a}
     .match-card:hover{filter:brightness(1.18);transform:translateY(-2px);box-shadow:0 0 0 2px #6e4a16,inset 0 0 0 1px rgba(246,212,90,.12),3px 6px 0 rgba(0,0,0,.5),0 0 10px rgba(232,190,74,.2)}
     .match-card:active{transform:translate(3px,4px);box-shadow:0 0 0 2px #6e4a16;filter:brightness(.95)}
+    .mc-grp{position:absolute;top:3px;left:6px;font-family:'Press Start 2P',monospace;font-size:6px;color:rgba(232,190,74,.45);white-space:nowrap;pointer-events:none}
     .ts{display:flex;align-items:center;gap:.4rem;min-width:0}
     .ts.r{flex-direction:row-reverse;text-align:right}
     .tn{font-size:21px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .tn.no{color:#f6d45a}
-    .mc{text-align:center;min-width:82px;flex-shrink:0}
-    .ms{font-family:'Press Start 2P',monospace;font-size:17px;color:#f6d45a;letter-spacing:.05em}
-    .mt{font-family:'Press Start 2P',monospace;font-size:13px;color:rgba(244,236,200,.8)}
-    .mm{font-size:18px;color:rgba(244,236,200,.45);margin-top:.18rem}
-    .mb{display:inline-block;font-family:'Press Start 2P',monospace;font-size:9px;padding:.15rem .4rem;margin-top:.22rem}
+    .mc{text-align:center;min-width:78px;flex-shrink:0;display:flex;flex-direction:column;align-items:center}
+    .mc-time{font-family:'Press Start 2P',monospace;font-size:7px;color:rgba(244,236,200,.38);margin-bottom:1px}
+    .ms{font-family:'Press Start 2P',monospace;font-size:20px;color:#f6d45a;letter-spacing:.05em}
+    .mt{font-family:'Press Start 2P',monospace;font-size:12px;color:rgba(244,236,200,.8);margin-bottom:2px}
+    .mb{display:inline-block;font-family:'Press Start 2P',monospace;font-size:9px;padding:.15rem .4rem;margin-top:.18rem}
     .b-fin{background:rgba(22,163,74,.3);color:#5ae05a;border:1px solid #5ae05a}
     .b-idag{background:rgba(192,96,0,.35);color:#f08020;border:1px solid #f08020}
     .b-kom{background:rgba(0,0,0,.3);color:rgba(244,236,200,.4);border:1px solid rgba(244,236,200,.18)}
-    .mr{font-family:'Press Start 2P',monospace;font-size:9px;color:rgba(244,236,200,.35);margin-top:.15rem}
     .match-list{margin-top:1.25rem}.date-sec{margin-bottom:1.1rem}
 
     /* ═══════════════════════════════════════════════
@@ -372,8 +372,8 @@
     footer{text-align:center;padding:1.5rem 0;margin-top:2rem;font-size:15px;color:rgba(244,236,200,.45)}
     footer a{color:#f6d45a;text-decoration:underline;text-underline-offset:2px}
     @media(max-width:480px){
-      .trophy-img{height:90px}.match-card{padding:.38rem .55rem;gap:.3rem}
-      .tn{font-size:18px}.mc{min-width:68px}.ms{font-size:11px}.flag-img{width:27px;height:18px}
+      .trophy-img{height:90px}.match-card{padding:.55rem .45rem .25rem;gap:.25rem}
+      .tn{font-size:18px}.mc{min-width:60px}.ms{font-size:14px}.mc-time{font-size:6px}.mt{font-size:10px}.mc-grp{font-size:5px}.flag-img{width:27px;height:18px}
       .modal-ft{font-size:20px}.modal-tname{font-size:19px}.flag-img-lg{width:44px;height:30px}
       .modal-score-area{gap:.3rem}.vbtn{font-size:8px}
     }
@@ -941,18 +941,19 @@ function matchCardHtml(m,extraHtml=''){
   const live=isLive(m),fin=!!sc&&!live,tod=!fin&&!live&&isMatchToday(m);
   const minRaw=m.live_minute||(m.status==='HT'?'HT':(!LIVE_DEAD.has((m.status||'').toLowerCase())?m.status:''));
   const minStr=minRaw?`${minRaw}${/^\d+$/.test(String(minRaw))?"'":''}`:' ';
-  const ctr=live
-    ?`<div class="ms">${sc?sc[0]:'–'}&thinsp;–&thinsp;${sc?sc[1]:'–'}</div><div class="mm" style="color:#f06060">${minStr}</div>`
-    :sc
-      ?`<div class="ms">${sc[0]}&thinsp;–&thinsp;${sc[1]}</div><div class="mm">${fmtTime(dt)}</div>`
-      :`<div class="mt">${dt?fmtTime(dt):'TBD'}</div><div class="mm">Avspark</div>`;
-  const bc=fin?'b-fin':tod?'b-idag':'b-kom',bt=fin?'Ferdig':tod?'I dag':'Kommende';
-  const badge=live
-    ?`<span class="mb" style="background:rgba(200,0,0,.25);color:#f04040;border:1px solid #c03030"><span class="live-dot" style="width:6px;height:6px;display:inline-block;vertical-align:middle;margin-right:3px"></span>LIVE</span>`
-    :`<span class="mb ${bc}">${bt}</span>`;
+  const timeStr=dt?fmtTime(dt):'TBD';
+  let ctr;
+  if(live){
+    ctr=`<div class="mc-time">${timeStr}</div><div class="ms">${sc?sc[0]:'–'}&thinsp;–&thinsp;${sc?sc[1]:'–'}</div><span class="mb" style="background:rgba(200,0,0,.25);color:#f04040;border:1px solid #c03030"><span class="live-dot" style="width:6px;height:6px;display:inline-block;vertical-align:middle;margin-right:3px"></span>LIVE ${minStr}</span>`;
+  }else if(fin){
+    ctr=`<div class="mc-time">${timeStr}</div><div class="ms">${sc[0]}&thinsp;–&thinsp;${sc[1]}</div><span class="mb b-fin">Ferdig</span>`;
+  }else{
+    ctr=`<div class="mt">${timeStr}</div><span class="mb ${tod?'b-idag':'b-kom'}">${tod?'I dag':'Kommende'}</span>`;
+  }
   return`<div class="match-card${isN?' nc':''}${isKO?' kc':''}" data-midx="${idx}">
+    ${lbl?`<div class="mc-grp">${lbl}</div>`:''}
     <div class="ts">${flagEl(t1)}<span class="tn${t1==='Norway'?' no':''}">${tn(t1)}</span></div>
-    <div class="mc">${ctr}${badge}<div class="mr">${lbl}</div></div>
+    <div class="mc">${ctr}</div>
     <div class="ts r">${flagEl(t2)}<span class="tn${t2==='Norway'?' no':''}">${tn(t2)}</span></div>
     ${extraHtml}
   </div>`;
