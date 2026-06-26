@@ -1326,7 +1326,6 @@ function mbrCard(m,idx){
     ${row(t1,sc?sc[0]:'-',w1)}${row(t2,sc?sc[1]:'-',w2)}${dateLbl?`<div class="mbr-date">${dateLbl}</div>`:''}
   </div>`;
 }
-}
 function mbrCol(arr,BH){
   return`<div class="mob-col" style="height:${BH}px">${arr.map(m=>mbrCard(m,midxOf(m))).join('')}</div>`;
 }
