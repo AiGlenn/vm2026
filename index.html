@@ -497,6 +497,7 @@
       .mbr-row.mbr-win{background:rgba(90,224,90,.1)}
       .mbr-sc{font-family:'Press Start 2P',monospace;font-size:6px;color:rgba(244,236,200,.5);flex-shrink:0}
       .mbr-sc.mbr-sw{color:#5ae05a}
+      .mbr-date{font-family:'Press Start 2P',monospace;font-size:5px;color:rgba(232,190,74,.45);text-align:center;padding:2px 0 1px;line-height:1}
       .mob-bronze-hdr{font-family:'Press Start 2P',monospace;font-size:8px;color:#c08030;text-align:center;margin:.8rem 0 .3rem}
     }
   </style>
@@ -1319,8 +1320,12 @@ function mbrCard(m,idx){
     return`<div class="mbr-row${win?' mbr-win':''}">${fl}${score}</div>`;
   }
   const isNo=t1==='Norway'||t2==='Norway'||projectedKoTeam(t1)==='Norway'||projectedKoTeam(t2)==='Norway';
+  const NOM=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+  const dateLbl=m.date?(()=>{const[,mo,dy]=m.date.split('-');return`${parseInt(dy)}.${NOM[parseInt(mo)-1]}`})():'';
   return`<div class="mbr-card${isNo?' mbr-nor':''}" id="mbr${idx}" data-midx="${idx}">
-    ${row(t1,sc?sc[0]:'-',w1)}${row(t2,sc?sc[1]:'-',w2)}</div>`;
+    ${row(t1,sc?sc[0]:'-',w1)}${row(t2,sc?sc[1]:'-',w2)}${dateLbl?`<div class="mbr-date">${dateLbl}</div>`:''}
+  </div>`;
+}
 }
 function mbrCol(arr,BH){
   return`<div class="mob-col" style="height:${BH}px">${arr.map(m=>mbrCard(m,midxOf(m))).join('')}</div>`;
@@ -1339,7 +1344,7 @@ function buildMobileBracket(gc,r32,r16,qf,sf,tp,fin){
   const brz=tp?`<div class="mob-bronze-hdr">🥉 BRONSEFINALE</div><div style="max-width:260px;margin:0 auto">${matchCardHtml(tp)}</div>`:'';
   return`<div class="mob-bracket-inner" id="mbInner" style="height:${BH}px">${lft}${ctr}${rgt}</div>${brz}`;
 }
-function drawMobileSVG(){
+function drawMobileSVG(r32,r16,qf,sf,fin){
   const inner=document.getElementById('mbInner');if(!inner)return;
   const old=inner.querySelector('svg.mob-svg');if(old)old.remove();
   const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -1355,6 +1360,7 @@ function drawMobileSVG(){
     sv.appendChild(p);
   }
   function pair(id1,id2,pid,goRight){
+    if(id1<0||id2<0||pid<0)return;
     const e1=document.getElementById(`mbr${id1}`),e2=document.getElementById(`mbr${id2}`),ep=document.getElementById(`mbr${pid}`);
     if(!e1||!e2||!ep)return;
     const r1=e1.getBoundingClientRect(),r2=e2.getBoundingClientRect(),rp=ep.getBoundingClientRect();
@@ -1366,6 +1372,7 @@ function drawMobileSVG(){
     mkPath(`M${x1} ${y1} H${xm} V${y2} H${x2} M${xm} ${yp} H${xp}`);
   }
   function arm(fid,tid,fRight,tLeft){
+    if(fid<0||tid<0)return;
     const ef=document.getElementById(`mbr${fid}`),et=document.getElementById(`mbr${tid}`);
     if(!ef||!et)return;
     const rf=ef.getBoundingClientRect(),rt=et.getBoundingClientRect();
@@ -1375,15 +1382,19 @@ function drawMobileSVG(){
     const xm=(xf+xt)/2;
     mkPath(Math.abs(yf-yt)<3?`M${xf} ${yf} H${xt}`:`M${xf} ${yf} H${xm} V${yt} H${xt}`,'#f6d45a','1.5');
   }
-  const gc=allMatches.findIndex(m=>!m.group);if(gc<0){inner.appendChild(sv);return}
-  for(let i=0;i<4;i++)pair(gc+i*2,gc+i*2+1,gc+16+i,true);
-  pair(gc+16,gc+17,gc+24,true);pair(gc+18,gc+19,gc+25,true);
-  pair(gc+24,gc+25,gc+28,true);
-  arm(gc+28,gc+31,true,true);
-  for(let i=0;i<4;i++)pair(gc+8+i*2,gc+9+i*2,gc+20+i,false);
-  pair(gc+20,gc+21,gc+26,false);pair(gc+22,gc+23,gc+27,false);
-  pair(gc+26,gc+27,gc+29,false);
-  arm(gc+29,gc+31,false,false);
+  const id=m=>m?midxOf(m):-1;
+  // Left side (r32[0-7] → r16[0-3] → qf[0-1] → sf[0] → fin)
+  for(let i=0;i<4;i++)pair(id(r32[i*2]),id(r32[i*2+1]),id(r16[i]),true);
+  pair(id(r16[0]),id(r16[1]),id(qf[0]),true);
+  pair(id(r16[2]),id(r16[3]),id(qf[1]),true);
+  pair(id(qf[0]),id(qf[1]),id(sf[0]),true);
+  if(sf[0]&&fin)arm(id(sf[0]),id(fin),true,true);
+  // Right side (r32[8-15] → r16[4-7] → qf[2-3] → sf[1] → fin)
+  for(let i=0;i<4;i++)pair(id(r32[8+i*2]),id(r32[9+i*2]),id(r16[4+i]),false);
+  pair(id(r16[4]),id(r16[5]),id(qf[2]),false);
+  pair(id(r16[6]),id(r16[7]),id(qf[3]),false);
+  pair(id(qf[2]),id(qf[3]),id(sf[1]),false);
+  if(sf[1]&&fin)arm(id(sf[1]),id(fin),false,false);
   inner.appendChild(sv);
 }
 
@@ -1445,10 +1456,20 @@ function renderSluttspill(){
   const el=document.getElementById('vSluttspill');
   const ko=allMatches.filter(m=>!m.group).sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1);
   if(!ko.length){el.innerHTML=`<div style="text-align:center;padding:3rem;color:rgba(244,236,200,.4);font-size:17px">Sluttspillet starter etter gruppespillet.</div>`;return}
-  const r32=ko.slice(0,16),r16=ko.slice(16,24),qf=ko.slice(24,28),sf=ko.slice(28,30),tp=ko[30],fin=ko[31];
+  const r32raw=ko.slice(0,16),r16raw=ko.slice(16,24),qf=ko.slice(24,28),sf=ko.slice(28,30),tp=ko[30],fin=ko[31];
+  // Reorder R32 and R16 so consecutive display pairs match actual bracket connections.
+  // FIFA bracket (M=FIFA match #, chrono=chronological index in ko[]):
+  // R32 chrono: 0=M73,1=M76,2=M74,3=M75,4=M78,5=M77,6=M79,7=M80,
+  //             8=M82,9=M81,10=M84,11=M83,12=M85,13=M88,14=M86,15=M87
+  // R16: M90=W73+W75, M89=W74+W77, M93=W83+W84, M94=W81+W82,
+  //      M91=W76+W78, M92=W79+W80, M95=W86+W88, M96=W85+W87
+  // QF: M97=W89+W90, M98=W93+W94, M99=W91+W92, M100=W95+W96
+  // SF1=W97+W98, SF2=W99+W100
+  const r32=[0,3,2,5,11,10,9,8,1,4,6,7,14,13,12,15].map(i=>r32raw[i]||null);
+  const r16=[0,1,4,5,2,3,6,7].map(i=>r16raw[i]||null);
   const gc=allMatches.filter(m=>m.group).length;
   const BH=1120;
-  function mkCol(id,lbl,arr){return`<div class="br-col" style="height:${BH}px"><div class="br-col-hdr">${lbl}</div><div class="br-col-body" style="height:${BH-32}px">${arr.map(m=>brCard(m,midxOf(m))).join('')}</div></div>`}
+  function mkCol(id,lbl,arr){return`<div class="br-col" style="height:${BH}px"><div class="br-col-hdr">${lbl}</div><div class="br-col-body" style="height:${BH-32}px">${arr.map(m=>m?brCard(m,midxOf(m)):brCard(null,-1)).join('')}</div></div>`}
   const gap=`<div class="br-gap" style="height:${BH}px"></div>`;
   const cols=[mkCol('r32','RUNDE 32',r32),gap,mkCol('r16','RUNDE 16',r16),gap,mkCol('qf','KF',qf),gap,mkCol('sf','SF',sf),gap,mkCol('fin','🏆 FINALE',fin?[fin]:[])].join('');
   let listHtml='<div class="bracket-list-fallback">';
@@ -1457,18 +1478,21 @@ function renderSluttspill(){
   const thirdHtml=tp?`<div class="third-place"><div class="group-header" style="font-size:9px;text-align:center;margin-bottom:3px">BRONSEFINALE</div>${matchCardHtml(tp)}</div>`:'';
   const mobHtml=`<div class="mob-bracket-wrap">${buildMobileBracket(gc,r32,r16,qf,sf,tp,fin)}</div>`;
   el.innerHTML=`<div class="bracket-outer"><div class="bracket-inner" id="bInner">${cols}</div></div>${thirdHtml}${listHtml}${mobHtml}`;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{drawSVG(gc);drawMobileSVG()}));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{drawSVG(r32,r16,qf,sf,fin);drawMobileSVG(r32,r16,qf,sf,fin)}));
 }
-function drawSVG(gc){
+function drawSVG(r32,r16,qf,sf,fin){
   const inner=document.getElementById('bInner');if(!inner)return;
   const old=inner.querySelector('svg');if(old)old.remove();
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svg.style.cssText='position:absolute;top:0;left:0;pointer-events:none;overflow:visible;z-index:10';
   svg.setAttribute('width',inner.scrollWidth);svg.setAttribute('height',inner.scrollHeight);inner.style.position='relative';
+  const id=m=>m?midxOf(m):-1;
   const pairs=[];
-  for(let i=0;i<8;i++)pairs.push([gc+i*2,gc+i*2+1,gc+16+i]);
-  for(let i=0;i<4;i++)pairs.push([gc+16+i*2,gc+16+i*2+1,gc+24+i]);
-  pairs.push([gc+24,gc+25,gc+28],[gc+26,gc+27,gc+29],[gc+28,gc+29,gc+31]);
+  for(let i=0;i<8;i++){if(r32[i*2]&&r32[i*2+1]&&r16[i])pairs.push([id(r32[i*2]),id(r32[i*2+1]),id(r16[i])]);}
+  for(let i=0;i<4;i++){if(r16[i*2]&&r16[i*2+1]&&qf[i])pairs.push([id(r16[i*2]),id(r16[i*2+1]),id(qf[i])]);}
+  if(qf[0]&&qf[1]&&sf[0])pairs.push([id(qf[0]),id(qf[1]),id(sf[0])]);
+  if(qf[2]&&qf[3]&&sf[1])pairs.push([id(qf[2]),id(qf[3]),id(sf[1])]);
+  if(sf[0]&&sf[1]&&fin)pairs.push([id(sf[0]),id(sf[1]),id(fin)]);
   const ir=inner.getBoundingClientRect();
   pairs.forEach(([i1,i2,ip])=>{
     const e1=document.getElementById(`bm${i1}`),e2=document.getElementById(`bm${i2}`),ep=document.getElementById(`bm${ip}`);
