@@ -742,15 +742,26 @@ async function fetchLiveMatches(){
     const todayStr=new Date().toISOString().slice(0,10).replace(/-/g,'');
     delete espnScoreboardCache[todayStr];
     const evs=await getESPNScoreboard(todayStr);
-    const prev=JSON.stringify(liveMatches.map(m=>m._espnId+':'+JSON.stringify(m.score)));
-    liveMatches=evs.filter(e=>e.competitions?.[0]?.status?.type?.state==='in').map(mapESPNEvent).filter(Boolean);
-    for(const ev of evs){
-      const mapped=mapESPNEvent(ev);if(!mapped)continue;
-      const m=allMatches.find(m=>m._espnId===ev.id);
-      if(m){m.status=mapped.status;m.live_minute=mapped.live_minute;if(mapped.score)m.score=mapped.score;}
+    // Also fetch yesterday if it's early morning (matches may still be updating)
+    const h=new Date().getUTCHours();
+    if(h<7){
+      const yd=new Date();yd.setUTCDate(yd.getUTCDate()-1);
+      const ydStr=yd.toISOString().slice(0,10).replace(/-/g,'');
+      delete espnScoreboardCache[ydStr];
+      const ydEvs=await getESPNScoreboard(ydStr);
+      applyScoreboardToMatches(ydEvs);
     }
-    const curr=JSON.stringify(liveMatches.map(m=>m._espnId+':'+JSON.stringify(m.score)));
-    if(currentView==='forside'&&(prev!==curr||liveMatches.length))renderForside();
+    const snapBefore=JSON.stringify(allMatches.map(m=>m._espnId+m.status+JSON.stringify(m.score)));
+    liveMatches=evs.filter(e=>e.competitions?.[0]?.status?.type?.state==='in').map(mapESPNEvent).filter(Boolean);
+    applyScoreboardToMatches(evs);
+    const snapAfter=JSON.stringify(allMatches.map(m=>m._espnId+m.status+JSON.stringify(m.score)));
+    if(snapBefore!==snapAfter||liveMatches.length){
+      computeGoals();computeAssists();computeCards();
+      if(currentView==='forside')renderForside();
+      else if(currentView==='kampprogram')renderKampprogram();
+      else if(currentView==='grupper')renderGrupper();
+      else if(currentView==='sluttspill')renderSluttspill();
+    }
   }catch{}
 }
 
@@ -770,18 +781,7 @@ function buildLiveHTML(){
   for(const lm of combined){
     const idx=allMatches.findIndex(m=>m._espnId===lm._espnId||(m.team1===lm.team1&&m.team2===lm.team2));
     const m=idx>=0?allMatches[idx]:lm;
-    const sc=m.score?.ft,t1=m.team1||'?',t2=m.team2||'?';
-    const isN=t1==='Norway'||t2==='Norway';
-    const lbl=m.group?(GROUP_NO[m.group]||m.group):(ROUND_NO[m.round]||m.round||'');
-    const minRaw=m.live_minute||(m.status==='HT'?'HT':(!LIVE_DEAD.has((m.status||'').toLowerCase())?m.status:''));
-    const minStr=minRaw?`${minRaw}${/^\d+$/.test(String(minRaw))?"'":''}`:' ';
-    const ctr=`<div class="ms">${sc?sc[0]:'–'}&thinsp;–&thinsp;${sc?sc[1]:'–'}</div><div class="mm">${minStr}</div>`;
-    const badge=`<span class="mb" style="background:rgba(200,0,0,.25);color:#f04040;border:1px solid #c03030"><span class="live-dot" style="width:6px;height:6px;display:inline-block;vertical-align:middle;margin-right:3px"></span>LIVE</span>`;
-    html+=`<div class="match-card${isN?' nc':''}" data-midx="${idx>=0?idx:''}">
-      <div class="ts">${flagEl(t1)}<span class="tn${t1==='Norway'?' no':''}">${tn(t1)}</span></div>
-      <div class="mc">${ctr}${badge}<div class="mr">${lbl}</div></div>
-      <div class="ts r">${flagEl(t2)}<span class="tn${t2==='Norway'?' no':''}">${tn(t2)}</span></div>
-    </div>`;
+    html+=matchCardHtml(m);
   }
   return html+'</div></div>';
 }
