@@ -1150,20 +1150,22 @@ function renderForside(){
   const liveIds=new Set(liveMatches.map(m=>m._espnId));
   const notLive=allMatches.filter(m=>!liveIds.has(m._espnId));
 
-  /* Next 3 upcoming */
-  const next3=notLive.filter(m=>!m.score?.ft).sort(byTime).slice(0,3);
-  /* Last 3 finished */
-  const last3=notLive.filter(m=>m.score?.ft).sort(byTime).slice(-3).reverse();
+  /* Today / yesterday in Oslo time */
+  const todayD=todayStr();
+  const yd=new Date(todayD+'T12:00:00');yd.setDate(yd.getDate()-1);
+  const yesterdayD=yd.toISOString().slice(0,10);
+  const todayMs=notLive.filter(m=>calDate(m)===todayD).sort(byTime);
+  const yesterdayMs=notLive.filter(m=>calDate(m)===yesterdayD&&m.score?.ft).sort(byTime);
 
   const nextHtml=`<div class="pixel-panel" style="margin-bottom:1rem">
-    <div class="group-header">Neste kamper</div>
-    <div style="padding:.3rem .4rem .05rem">${next3.length?next3.map(m=>matchCardHtml(m)).join(''):'<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen kommende kamper</p>'}</div>
+    <div class="group-header">I dag</div>
+    <div style="padding:.3rem .4rem .05rem">${todayMs.length?todayMs.map(m=>matchCardHtml(m)).join(''):'<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen kamper i dag</p>'}</div>
   </div>`;
 
-  const lastHtml=`<div class="pixel-panel" style="margin-bottom:1rem">
-    <div class="group-header">Siste kamper</div>
-    <div style="padding:.3rem .4rem .05rem">${last3.length?last3.map(m=>matchCardHtml(m)).join(''):'<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen ferdige kamper ennå</p>'}</div>
-  </div>`;
+  const lastHtml=yesterdayMs.length?`<div class="pixel-panel" style="margin-bottom:1rem">
+    <div class="group-header">I går</div>
+    <div style="padding:.3rem .4rem .05rem">${yesterdayMs.map(m=>matchCardHtml(m)).join('')}</div>
+  </div>`:'';
 
   const norgeHtml=`<div class="pixel-panel" style="margin-bottom:1rem">
     <div class="group-header" style="display:flex;align-items:center;gap:.5rem">
@@ -1179,6 +1181,7 @@ function renderForside(){
 function renderKampprogram(){
   const sortedAll=[...allMatches].sort(byTime);
   const matches=applyFilters(sortedAll);
+  if(currentStatus==='ferdige')matches.reverse();
   const el=document.getElementById('vKampprogram');
   if(!matches.length){
     el.innerHTML=`<p style="color:rgba(244,236,200,.4);font-size:17px;padding:2rem 0;text-align:center">${currentStatus==='idag'?'Ingen VM-kamper i dag. Prøv «Alle».':'Ingen kamper.'}</p>`;return;
@@ -1384,14 +1387,36 @@ function drawMobileSVG(){
   inner.appendChild(sv);
 }
 
-function parseTRef(r){if(!r)return'TBD';const wm=r.match(/^W(\d+)$/);if(wm)return`V.K${wm[1]}`;const gm=r.match(/^(\d+)([A-L])$/);if(gm)return`${gm[1]}.Gr${gm[2]}`;const tm=r.match(/^3([A-L]{2,})$/);if(tm)return`3.pl(${tm[1]})`;return tn(r)}
-function isPH(r){return!r||!!r.match(/^[WL\d]/)}
+function parseTRef(r){
+  if(!r)return'TBD';
+  const wm=r.match(/^W(\d+)$/);if(wm)return`V.K${wm[1]}`;
+  const gm=r.match(/^(\d+)([A-L])$/);if(gm)return`${gm[1]}.Gr${gm[2]}`;
+  const tm=r.match(/^3([A-L]{2,})$/);if(tm)return`3.pl(${tm[1]})`;
+  const ew=r.match(/^Group ([A-L]) Winner$/i);if(ew)return`1.Gr${ew[1]}`;
+  const ep=r.match(/^Group ([A-L]) (\d+)/i);if(ep)return`${ep[2]}.Gr${ep[1]}`;
+  const et=r.match(/^Third Place Group ([A-L/]+)/i);if(et)return`3.pl(${et[1]})`;
+  const er=r.match(/^Round of (\d+) (\d+) Winner$/i);if(er)return`V.R${er[1]}#${er[2]}`;
+  return tn(r);
+}
+function isPH(r){
+  if(!r)return true;
+  if(r.match(/^[WL\d]/))return true;
+  if(r.match(/^Group [A-L] /i))return true;
+  if(r.match(/^Third Place Group /i))return true;
+  if(r.match(/^Round of (32|16) \d+ Winner/i))return true;
+  return false;
+}
 function projectedKoTeam(ref){
   if(!ref||!isPH(ref))return null;
-  const gm=ref.match(/^(\d+)([A-L])$/);
-  if(!gm)return null;
-  const rank=parseInt(gm[1]),st=calcStandings(`Group ${gm[2]}`);
-  if(st.length>=rank&&st[rank-1].gp>0)return st[rank-1].n;
+  // Short code: "1A"
+  const sc=ref.match(/^(\d+)([A-L])$/);
+  if(sc){const rank=parseInt(sc[1]),st=calcStandings(`Group ${sc[2]}`);return st[rank-1]?.gp>0?st[rank-1].n:null;}
+  // ESPN text: "Group A Winner"
+  const ew=ref.match(/^Group ([A-L]) Winner$/i);
+  if(ew){const st=calcStandings(`Group ${ew[1]}`);return st[0]?.gp>0?st[0].n:null;}
+  // ESPN text: "Group B 2nd Place" / "Group C 3rd Place"
+  const ep=ref.match(/^Group ([A-L]) (\d+)/i);
+  if(ep){const rank=parseInt(ep[2]),st=calcStandings(`Group ${ep[1]}`);return st[rank-1]?.gp>0?st[rank-1].n:null;}
   return null;
 }
 function midxOf(m){return allMatches.findIndex(x=>x._espnId===m._espnId)}
