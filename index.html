@@ -1249,11 +1249,15 @@ function renderKalender(){
       html+=`<div class="cal-num${isTod?' tday':''}">${numLbl}</div>`;
       dm.slice(0,max).forEach(m=>{
         const idx=allMatches.indexOf(m),sc=m.score?.ft,dt=parseDT(m.date,m.time);
+        const isKO=!m.group;
+        const r1=isKO&&isPH(m.team1)?(projectedKoTeam(m.team1)||m.team1):m.team1;
+        const r2=isKO&&isPH(m.team2)?(projectedKoTeam(m.team2)||m.team2):m.team2;
+        const isNo=r1==='Norway'||r2==='Norway';
         const ctr=sc?`<span class="csc">${sc[0]}-${sc[1]}</span>`:`<span class="ctm">${dt?fmtTime(dt):'?'}</span>`;
-        html+=`<div class="cal-mrow${m.team1==='Norway'||m.team2==='Norway'?' m-nor':''}${!m.group?' m-ko':''}${sc?' m-fin':''}" data-midx="${idx}">
-          <div class="cal-side">${calFlag(m.team1)}${showName?`<span class="ctn">${tn(m.team1)}</span>`:''}</div>
+        html+=`<div class="cal-mrow${isNo?' m-nor':''}${isKO?' m-ko':''}${sc?' m-fin':''}" data-midx="${idx}">
+          <div class="cal-side">${calFlag(r1)}${showName?`<span class="ctn">${tn(r1)}</span>`:''}</div>
           <div class="cal-ctr">${ctr}</div>
-          <div class="cal-side right">${calFlag(m.team2)}${showName?`<span class="ctn">${tn(m.team2)}</span>`:''}</div>
+          <div class="cal-side right">${calFlag(r2)}${showName?`<span class="ctn">${tn(r2)}</span>`:''}</div>
         </div>`;
       });
       if(dm.length>max)html+=`<div class="cmore">+${dm.length-max} til</div>`;
