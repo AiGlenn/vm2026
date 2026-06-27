@@ -592,7 +592,7 @@
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
     &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
-    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.4</span>
+    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.5</span>
   </footer>
 </div>
 
@@ -1471,15 +1471,10 @@ function projectedKoTeam(ref){
   // ESPN text: "Group B 2nd Place" / "Group C 3rd Place"
   const ep=ref.match(/^Group ([A-L]) (\d+)/i);
   if(ep){const rank=parseInt(ep[2]),st=calcStandings(`Group ${ep[1]}`);return st[rank-1]?.gp>0?st[rank-1].n:null;}
-  // "Third Place Group A/B/C/D/F" — best third-place team among those groups (all 3 games played)
+  // "Third Place Group A/B/C/D/F" — do NOT guess; FIFA assigns these via a matrix.
+  // ESPN confirms the actual team once groups are done; fetchUpcomingKoTeams() handles it.
   const tp=ref.match(/^Third Place Group ([A-L][/A-L]*)/i);
-  if(tp){
-    const grps=tp[1].split('/').map(g=>g.trim().toUpperCase()).filter(g=>/^[A-L]$/.test(g));
-    const candidates=grps.map(g=>{const st=calcStandings(`Group ${g}`);return st[2]&&st[2].gp>=3?st[2]:null}).filter(Boolean);
-    if(!candidates.length)return null;
-    candidates.sort((a,b)=>{if(b.pts!==a.pts)return b.pts-a.pts;const da=a.gf-a.ga,db=b.gf-b.ga;if(db!==da)return db-da;return b.gf-a.gf});
-    return candidates[0].n;
-  }
+  if(tp)return null;
   // "Round of 32/16 N Winner", "Quarterfinal N Winner", "Semifinal N Winner/Loser"
   const rw=ref.match(/^(Round of 32|Round of 16|Quarterfinal|Semifinal) (\d+) (Winner|Loser)$/i);
   if(rw){
@@ -1503,10 +1498,7 @@ function isProjectionCertain(ref){
   const sc=ref.match(/^(\d+)([A-L])$/);
   if(sc){const st=calcStandings(`Group ${sc[2]}`);return st.length>=2&&st.every(t=>t.gp>=3);}
   const tp=ref.match(/^Third Place Group ([A-L/]+)/i);
-  if(tp){
-    const grps=tp[1].split('/').map(g=>g.trim().toUpperCase()).filter(g=>/^[A-L]$/.test(g));
-    return grps.every(g=>{const st=calcStandings(`Group ${g}`);return st.length>=2&&st.every(t=>t.gp>=3);});
-  }
+  if(tp)return false; // never certain until ESPN confirms via fetchUpcomingKoTeams
   const rw=ref.match(/^(Round of 32|Round of 16|Quarterfinal|Semifinal) (\d+) (Winner|Loser)$/i);
   if(rw){
     const[,roundName,nStr]=rw,n=parseInt(nStr);
