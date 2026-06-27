@@ -592,7 +592,7 @@
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
     &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
-    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.2</span>
+    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.3</span>
   </footer>
 </div>
 
@@ -1246,9 +1246,9 @@ function renderKalender(){
       const isTod=ds===today,di=new Date(yr,mo,d).getDay();
       const numLbl=hdr?`${d}${isTod?' ◀':''}`
         :cols===4?`${WEEKDAYS_NO[di]} ${d}.${isTod?' ◀':''}`
-        :`${WEEKDAYS_3[di]} ${d}. ${MONTHS_NO[mo]}${isTod?' ◀':''}`;
+        :`${WEEKDAYS_3[di]} ${d}.${isTod?' ◀':''}`;
       const koRound=dm.find(m=>m.round)?.round;
-      const roundBadge=koRound?`<span style="font-family:'Press Start 2P',monospace;font-size:6px;color:#f6d45a;background:rgba(246,212,90,.12);border:1px solid rgba(246,212,90,.3);padding:1px 3px;margin-left:3px;vertical-align:middle">${ROUND_CAL[koRound]||koRound}</span>`:'';
+      const roundBadge=koRound?`<span style="font-family:'Press Start 2P',monospace;font-size:6px;color:#f6d45a;background:rgba(246,212,90,.12);border:1px solid rgba(246,212,90,.3);padding:1px 3px;margin-right:4px;vertical-align:middle">${ROUND_CAL[koRound]||koRound}</span>`:'';
       html+=`<div class="cal-day${isTod?' today':''}${dm.length?'':' empty'}" style="min-height:${minH}px">`;
       html+=`<div class="cal-num${isTod?' tday':''}">${roundBadge}${numLbl}</div>`;
       dm.slice(0,max).forEach(m=>{
