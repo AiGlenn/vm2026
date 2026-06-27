@@ -1148,17 +1148,42 @@ function buildNorwayHTML(){
 }
 
 /* ══ RENDER: FORSIDE ══ */
+function getCurrentKoRound(){
+  for(const rk of ROUND_ORDER){
+    const rm=allMatches.filter(m=>m.round===rk);
+    if(rm.length&&rm.some(m=>!m.score?.ft))return rk;
+  }
+  // All rounds done — return Final so we show the result
+  const fin=allMatches.filter(m=>m.round==='Final');
+  return fin.length?'Final':null;
+}
+function isKoMode(){
+  const today=todayStr();
+  return allMatches.filter(m=>m.round==='Round of 32').some(m=>m.score?.ft||calDate(m)<=today);
+}
+
 function renderForside(){
   const el=document.getElementById('vForside');
-
-  /* Live */
   const liveHtml=buildLiveHTML();
-
-  /* Filter out live match IDs from upcoming/finished to avoid dupes */
   const liveIds=new Set(liveMatches.map(m=>m._espnId));
   const notLive=allMatches.filter(m=>!liveIds.has(m._espnId));
 
-  /* Today / yesterday in Oslo time */
+  if(isKoMode()){
+    /* ── KO MODE: show current round ── */
+    const curRound=getCurrentKoRound();
+    if(curRound){
+      const roundMs=notLive.filter(m=>m.round===curRound).sort(byTime);
+      const roundLbl=ROUND_NO[curRound]||curRound;
+      const koHtml=`<div class="pixel-panel" style="margin-bottom:1rem">
+        <div class="group-header">${roundLbl}</div>
+        <div style="padding:.3rem .4rem .05rem">${roundMs.map(m=>matchCardHtml(m)).join('')}</div>
+      </div>`;
+      el.innerHTML=liveHtml+koHtml;
+    }
+    return;
+  }
+
+  /* ── GROUP STAGE MODE: today / yesterday ── */
   const todayD=todayStr();
   const yd=new Date(todayD+'T12:00:00');yd.setDate(yd.getDate()-1);
   const yesterdayD=yd.toISOString().slice(0,10);
@@ -1169,19 +1194,16 @@ function renderForside(){
     <div class="group-header">I dag</div>
     <div style="padding:.3rem .4rem .05rem">${todayMs.length?todayMs.map(m=>matchCardHtml(m)).join(''):'<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen kamper i dag</p>'}</div>
   </div>`;
-
   const lastHtml=yesterdayMs.length?`<div class="pixel-panel" style="margin-bottom:1rem">
     <div class="group-header">I går</div>
     <div style="padding:.3rem .4rem .05rem">${yesterdayMs.map(m=>matchCardHtml(m)).join('')}</div>
   </div>`:'';
-
   const norgeHtml=`<div class="pixel-panel" style="margin-bottom:1rem">
     <div class="group-header" style="display:flex;align-items:center;gap:.5rem">
       <img src="flags/no.png" alt="" class="flag-img-sm"> HEIA NORGE! — GRUPPE I <img src="flags/no.png" alt="" class="flag-img-sm">
     </div>
     <div style="padding:.3rem .4rem .05rem">${buildNorwayHTML()}</div>
   </div>`;
-
   el.innerHTML=liveHtml+nextHtml+lastHtml+norgeHtml+`<div style="margin-top:1.25rem">${buildGrupperHTML()}</div>`;
 }
 
@@ -1421,6 +1443,8 @@ function isPH(r){
   if(r.match(/^Group [A-L] /i))return true;
   if(r.match(/^Third Place Group /i))return true;
   if(r.match(/^Round of (32|16) \d+ Winner/i))return true;
+  if(r.match(/^Quarterfinal \d+ Winner/i))return true;
+  if(r.match(/^Semifinal \d+ (Winner|Loser)/i))return true;
   return false;
 }
 function projectedKoTeam(ref){
@@ -1443,13 +1467,17 @@ function projectedKoTeam(ref){
     candidates.sort((a,b)=>{if(b.pts!==a.pts)return b.pts-a.pts;const da=a.gf-a.ga,db=b.gf-b.ga;if(db!==da)return db-da;return b.gf-a.gf});
     return candidates[0].n;
   }
-  // "Round of 32 N Winner" — winner of ESPN's Nth R32 match (sorted by ESPN ID)
-  const rw=ref.match(/^Round of 32 (\d+) Winner$/i);
+  // "Round of 32/16 N Winner", "Quarterfinal N Winner", "Semifinal N Winner/Loser"
+  const rw=ref.match(/^(Round of 32|Round of 16|Quarterfinal|Semifinal) (\d+) (Winner|Loser)$/i);
   if(rw){
-    const n=parseInt(rw[1]);
-    const r32=allMatches.filter(m=>m.round==='Round of 32').sort((a,b)=>a._espnId<b._espnId?-1:1);
-    const match=r32[n-1];if(!match||!match.score?.ft)return null;
-    const[s1,s2]=match.score.ft;return s1>s2?match.team1:s1<s2?match.team2:null;
+    const[,roundName,nStr,outcome]=rw,n=parseInt(nStr);
+    const roundKey={'round of 32':'Round of 32','round of 16':'Round of 16','quarterfinal':'Quarterfinals','semifinal':'Semifinals'}[roundName.toLowerCase()];
+    if(!roundKey)return null;
+    const pool=allMatches.filter(m=>m.round===roundKey).sort((a,b)=>a._espnId<b._espnId?-1:1);
+    const match=pool[n-1];if(!match||!match.score?.ft)return null;
+    const[s1,s2]=match.score.ft;
+    if(outcome.toLowerCase()==='loser')return s1<s2?match.team1:s1>s2?match.team2:null;
+    return s1>s2?match.team1:s1<s2?match.team2:null;
   }
   return null;
 }
