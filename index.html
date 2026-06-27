@@ -935,8 +935,13 @@ function isLive(m){
 /* ── MATCH CARD HTML ── */
 function matchCardHtml(m,extraHtml=''){
   const idx=allMatches.indexOf(m),dt=parseDT(m.date,m.time);
-  const isN=m.team1==='Norway'||m.team2==='Norway',isKO=!m.group;
+  const isKO=!m.group;
   const sc=m.score?.ft,t1=m.team1||'?',t2=m.team2||'?';
+  // For KO matches, resolve placeholder team names to projected teams for display
+  const t1d=isKO&&isPH(t1)?(projectedKoTeam(t1)||t1):t1;
+  const t2d=isKO&&isPH(t2)?(projectedKoTeam(t2)||t2):t2;
+  const isN=t1==='Norway'||t2==='Norway'||t1d==='Norway'||t2d==='Norway';
+  const isProj1=isKO&&isPH(t1)&&t1d!==t1,isProj2=isKO&&isPH(t2)&&t2d!==t2;
   const lbl=m.group?(GROUP_NO[m.group]||m.group):(ROUND_NO[m.round]||m.round||'');
   const live=isLive(m),fin=!!sc&&!live,tod=!fin&&!live&&isMatchToday(m);
   const minRaw=m.live_minute||(m.status==='HT'?'HT':(!LIVE_DEAD.has((m.status||'').toLowerCase())?m.status:''));
@@ -950,11 +955,12 @@ function matchCardHtml(m,extraHtml=''){
   }else{
     ctr=`<div class="mt">${timeStr}</div><span class="mb ${tod?'b-idag':'b-kom'}">${tod?'I dag':'Kommende'}</span>`;
   }
+  const projStyle='opacity:.65';
   return`<div class="match-card${isN?' nc':''}${isKO?' kc':''}" data-midx="${idx}">
     ${lbl?`<div class="mc-grp">${lbl}</div>`:''}
-    <div class="ts">${flagEl(t1)}<span class="tn${t1==='Norway'?' no':''}">${tn(t1)}</span></div>
+    <div class="ts">${flagEl(t1d)}<span class="tn${t1d==='Norway'?' no':''}"${isProj1?` style="${projStyle}"`:''}>${tn(t1d)}</span></div>
     <div class="mc">${ctr}</div>
-    <div class="ts r">${flagEl(t2)}<span class="tn${t2==='Norway'?' no':''}">${tn(t2)}</span></div>
+    <div class="ts r">${flagEl(t2d)}<span class="tn${t2d==='Norway'?' no':''}"${isProj2?` style="${projStyle}"`:''}>${tn(t2d)}</span></div>
     ${extraHtml}
   </div>`;
 }
@@ -1428,6 +1434,23 @@ function projectedKoTeam(ref){
   // ESPN text: "Group B 2nd Place" / "Group C 3rd Place"
   const ep=ref.match(/^Group ([A-L]) (\d+)/i);
   if(ep){const rank=parseInt(ep[2]),st=calcStandings(`Group ${ep[1]}`);return st[rank-1]?.gp>0?st[rank-1].n:null;}
+  // "Third Place Group A/B/C/D/F" — best third-place team among those groups (all 3 games played)
+  const tp=ref.match(/^Third Place Group ([A-L][/A-L]*)/i);
+  if(tp){
+    const grps=tp[1].split('/').map(g=>g.trim().toUpperCase()).filter(g=>/^[A-L]$/.test(g));
+    const candidates=grps.map(g=>{const st=calcStandings(`Group ${g}`);return st[2]&&st[2].gp>=3?st[2]:null}).filter(Boolean);
+    if(!candidates.length)return null;
+    candidates.sort((a,b)=>{if(b.pts!==a.pts)return b.pts-a.pts;const da=a.gf-a.ga,db=b.gf-b.ga;if(db!==da)return db-da;return b.gf-a.gf});
+    return candidates[0].n;
+  }
+  // "Round of 32 N Winner" — winner of ESPN's Nth R32 match (sorted by ESPN ID)
+  const rw=ref.match(/^Round of 32 (\d+) Winner$/i);
+  if(rw){
+    const n=parseInt(rw[1]);
+    const r32=allMatches.filter(m=>m.round==='Round of 32').sort((a,b)=>a._espnId<b._espnId?-1:1);
+    const match=r32[n-1];if(!match||!match.score?.ft)return null;
+    const[s1,s2]=match.score.ft;return s1>s2?match.team1:s1<s2?match.team2:null;
+  }
   return null;
 }
 function midxOf(m){return allMatches.findIndex(x=>x._espnId===m._espnId)}
