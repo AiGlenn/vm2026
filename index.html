@@ -592,6 +592,7 @@
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
     &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
+    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.0</span>
   </footer>
 </div>
 
@@ -941,7 +942,8 @@ function matchCardHtml(m,extraHtml=''){
   const t1d=isKO&&isPH(t1)?(projectedKoTeam(t1)||t1):t1;
   const t2d=isKO&&isPH(t2)?(projectedKoTeam(t2)||t2):t2;
   const isN=t1==='Norway'||t2==='Norway'||t1d==='Norway'||t2d==='Norway';
-  const isProj1=isKO&&isPH(t1)&&t1d!==t1,isProj2=isKO&&isPH(t2)&&t2d!==t2;
+  const isProj1=isKO&&isPH(t1)&&t1d!==t1&&!isProjectionCertain(t1);
+  const isProj2=isKO&&isPH(t2)&&t2d!==t2&&!isProjectionCertain(t2);
   const lbl=m.group?(GROUP_NO[m.group]||m.group):(ROUND_NO[m.round]||m.round||'');
   const live=isLive(m),fin=!!sc&&!live,tod=!fin&&!live&&isMatchToday(m);
   const minRaw=m.live_minute||(m.status==='HT'?'HT':(!LIVE_DEAD.has((m.status||'').toLowerCase())?m.status:''));
@@ -1341,9 +1343,10 @@ function mbrCard(m,idx){
   function row(t,sv,win){
     const ph=isPH(t);
     const proj=ph?projectedKoTeam(t):null;
+    const certain=!ph||!proj||isProjectionCertain(t);
     const disp=proj||t;
     const fl=FLAG_FILE[disp]
-      ?`<img src="flags/${FLAG_FILE[disp]}.png" style="width:16px;height:11px;flex-shrink:0;image-rendering:pixelated${proj?';opacity:.55':''}" alt="">`
+      ?`<img src="flags/${FLAG_FILE[disp]}.png" style="width:16px;height:11px;flex-shrink:0;image-rendering:pixelated${proj&&!certain?';opacity:.55':''}" alt="">`
       :`<span style="width:16px;height:11px;background:rgba(255,255,255,.12);display:inline-block;flex-shrink:0"></span>`;
     const score=sc!==undefined&&!ph?`<span class="mbr-sc${win?' mbr-sw':''}">${sv}</span>`:'';
     return`<div class="mbr-row${win?' mbr-win':''}">${fl}${score}</div>`;
@@ -1481,6 +1484,29 @@ function projectedKoTeam(ref){
   }
   return null;
 }
+function isProjectionCertain(ref){
+  if(!ref||!isPH(ref))return true;
+  const ew=ref.match(/^Group ([A-L]) Winner$/i);
+  if(ew){const st=calcStandings(`Group ${ew[1]}`);return st.length>=2&&st.every(t=>t.gp>=3);}
+  const ep=ref.match(/^Group ([A-L]) (\d+)/i);
+  if(ep){const st=calcStandings(`Group ${ep[1]}`);return st.length>=2&&st.every(t=>t.gp>=3);}
+  const sc=ref.match(/^(\d+)([A-L])$/);
+  if(sc){const st=calcStandings(`Group ${sc[2]}`);return st.length>=2&&st.every(t=>t.gp>=3);}
+  const tp=ref.match(/^Third Place Group ([A-L/]+)/i);
+  if(tp){
+    const grps=tp[1].split('/').map(g=>g.trim().toUpperCase()).filter(g=>/^[A-L]$/.test(g));
+    return grps.every(g=>{const st=calcStandings(`Group ${g}`);return st.length>=2&&st.every(t=>t.gp>=3);});
+  }
+  const rw=ref.match(/^(Round of 32|Round of 16|Quarterfinal|Semifinal) (\d+) (Winner|Loser)$/i);
+  if(rw){
+    const[,roundName,nStr]=rw,n=parseInt(nStr);
+    const roundKey={'round of 32':'Round of 32','round of 16':'Round of 16','quarterfinal':'Quarterfinals','semifinal':'Semifinals'}[roundName.toLowerCase()];
+    if(!roundKey)return false;
+    const pool=allMatches.filter(m=>m.round===roundKey).sort((a,b)=>a._espnId<b._espnId?-1:1);
+    return !!(pool[n-1]?.score?.ft);
+  }
+  return false;
+}
 function midxOf(m){return allMatches.findIndex(x=>x._espnId===m._espnId)}
 function brCard(m,idx){
   if(!m)return`<div class="br-card" id="bm${idx}" data-midx="${idx}"><div class="br-row"><span class="br-name dim">TBD</span></div><div class="br-row"><span class="br-name dim">TBD</span></div></div>`;
@@ -1488,12 +1514,13 @@ function brCard(m,idx){
   function row(t,score,win){
     const ph=isPH(t);
     const proj=ph?projectedKoTeam(t):null;
+    const certain=!ph||!proj||isProjectionCertain(t);
     const disp=proj||t;
     const c=FLAG_FILE[disp];
-    const fi=c?`<img src="flags/${c}.png" alt="" class="flag-img-xs" loading="lazy"${proj?' style="opacity:.55"':''}>`:
+    const fi=c?`<img src="flags/${c}.png" alt="" class="flag-img-xs" loading="lazy"${proj&&!certain?' style="opacity:.55"':''}>`:
       `<span style="display:inline-block;width:20px;height:14px;background:rgba(0,0,0,.2);flex-shrink:0"></span>`;
     const label=proj?tn(proj):ph?parseTRef(t):tn(t);
-    const cls=`br-name${disp==='Norway'?' no':''}${(ph&&!proj)?' dim':''}${proj?' proj':''}`;
+    const cls=`br-name${disp==='Norway'?' no':''}${(ph&&!proj)?' dim':''}${proj&&!certain?' proj':''}`;
     return`<div class="br-row${win?' winner':''}">${fi}<span class="${cls}">${label}</span>${sc!==undefined?`<span class="br-score${win?' w':''}">${score}</span>`:''}</div>`;
   }
   const w1=sc&&sc[0]>sc[1],w2=sc&&sc[1]>sc[0];
