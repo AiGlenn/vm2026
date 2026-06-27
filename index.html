@@ -592,7 +592,7 @@
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
     &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
-    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.3</span>
+    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.4</span>
   </footer>
 </div>
 
@@ -763,6 +763,7 @@ async function fetchLiveMatches(){
       else if(currentView==='grupper')renderGrupper();
       else if(currentView==='sluttspill')renderSluttspill();
     }
+    fetchUpcomingKoTeams(); // refresh confirmed KO team names (throttled to every 5 min)
   }catch{}
 }
 
@@ -2328,6 +2329,35 @@ async function fetchAllScores(){
   loadAllCompletedSummaries();
 }
 
+let _lastKoTeamFetch=0;
+async function fetchUpcomingKoTeams(){
+  const now=Date.now();
+  if(now-_lastKoTeamFetch<5*60*1000)return; // throttle: at most every 5 min
+  _lastKoTeamFetch=now;
+  const today=new Date().toISOString().slice(0,10);
+  const futureDates=new Set();
+  for(const m of allMatches){
+    if(!m.group&&m.date&&m.date>today)futureDates.add(m.date.replace(/-/g,''));
+  }
+  let changed=false;
+  for(const ds of [...futureDates].sort()){
+    try{
+      delete espnScoreboardCache[ds]; // bypass in-memory cache to get fresh confirmations
+      const snapBefore=allMatches.filter(m=>m.round).map(m=>m.team1+m.team2).join();
+      const evs=await getESPNScoreboard(ds);
+      applyScoreboardToMatches(evs);
+      const snapAfter=allMatches.filter(m=>m.round).map(m=>m.team1+m.team2).join();
+      if(snapBefore!==snapAfter)changed=true;
+    }catch{}
+  }
+  if(changed){
+    if(currentView==='forside')renderForside();
+    else if(currentView==='kampprogram')renderKampprogram();
+    else if(currentView==='sluttspill')renderSluttspill();
+    else if(currentView==='kalender')renderKalender();
+  }
+}
+
 let _summariesLoading=false;
 async function loadAllCompletedSummaries(){
   if(_summariesLoading)return;
@@ -2377,6 +2407,7 @@ async function loadData(){
       document.getElementById('loading').style.display='none';
       showView('forside');
       fetchAllScores(); // background: fetch fresh data for today + uncached dates
+      fetchUpcomingKoTeams(); // background: get ESPN-confirmed team names for upcoming KO matches
       fetchNRKHighlights(); // background: check for new NRK episodes
       startLivePolling();
       return;
