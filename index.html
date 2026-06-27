@@ -831,8 +831,10 @@ const ROUND_NO={'Round of 32':'Runde 32','Round of 16':'Runde 16',
   'Quarterfinals':'Kvartfinale','Semifinals':'Semifinale','3rd Place':'Bronsefinale','Final':'Finale'};
 const ROUND_ORDER=['Round of 32','Round of 16','Quarterfinals','Semifinals','3rd Place','Final'];
 const WEEKDAYS_NO=['Sø','Ma','Ti','On','To','Fr','Lø'];
+const WEEKDAYS_3=['Søn','Man','Tir','Ons','Tor','Fre','Lør'];
 const WEEKDAYS_FULL=['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
 const MONTHS_NO=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+const ROUND_CAL={'Round of 32':'R32','Round of 16':'R16','Quarterfinals':'QF','Semifinals':'SF','3rd Place':'3.plass','Final':'Finale'};
 const ZCFG={
   uke: {cols:7,minH:70, max:3, showName:false,offset:true, hdr:true },
   fire:{cols:3,minH:190,max:10,showName:true, offset:false,hdr:false},
@@ -1244,9 +1246,11 @@ function renderKalender(){
       const isTod=ds===today,di=new Date(yr,mo,d).getDay();
       const numLbl=hdr?`${d}${isTod?' ◀':''}`
         :cols===4?`${WEEKDAYS_NO[di]} ${d}.${isTod?' ◀':''}`
-        :`${WEEKDAYS_FULL[di]} ${d}. ${MONTHS_NO[mo]}${isTod?' ◀':''}`;
+        :`${WEEKDAYS_3[di]} ${d}. ${MONTHS_NO[mo]}${isTod?' ◀':''}`;
+      const koRound=dm.find(m=>m.round)?.round;
+      const roundBadge=koRound?`<span style="font-family:'Press Start 2P',monospace;font-size:6px;color:#f6d45a;background:rgba(246,212,90,.12);border:1px solid rgba(246,212,90,.3);padding:1px 3px;margin-left:3px;vertical-align:middle">${ROUND_CAL[koRound]||koRound}</span>`:'';
       html+=`<div class="cal-day${isTod?' today':''}${dm.length?'':' empty'}" style="min-height:${minH}px">`;
-      html+=`<div class="cal-num${isTod?' tday':''}">${numLbl}</div>`;
+      html+=`<div class="cal-num${isTod?' tday':''}">${numLbl}${roundBadge}</div>`;
       dm.slice(0,max).forEach(m=>{
         const idx=allMatches.indexOf(m),sc=m.score?.ft,dt=parseDT(m.date,m.time);
         const isKO=!m.group;
