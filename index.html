@@ -592,7 +592,7 @@
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
     &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
-    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.1</span>
+    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.2</span>
   </footer>
 </div>
 
@@ -1250,7 +1250,7 @@ function renderKalender(){
       const koRound=dm.find(m=>m.round)?.round;
       const roundBadge=koRound?`<span style="font-family:'Press Start 2P',monospace;font-size:6px;color:#f6d45a;background:rgba(246,212,90,.12);border:1px solid rgba(246,212,90,.3);padding:1px 3px;margin-left:3px;vertical-align:middle">${ROUND_CAL[koRound]||koRound}</span>`:'';
       html+=`<div class="cal-day${isTod?' today':''}${dm.length?'':' empty'}" style="min-height:${minH}px">`;
-      html+=`<div class="cal-num${isTod?' tday':''}">${numLbl}${roundBadge}</div>`;
+      html+=`<div class="cal-num${isTod?' tday':''}">${roundBadge}${numLbl}</div>`;
       dm.slice(0,max).forEach(m=>{
         const idx=allMatches.indexOf(m),sc=m.score?.ft,dt=parseDT(m.date,m.time);
         const isKO=!m.group;
@@ -1366,20 +1366,21 @@ function mbrCard(m,idx){
     ${row(t1,sc?sc[0]:'-',w1)}${row(t2,sc?sc[1]:'-',w2)}${dateLbl?`<div class="mbr-date">${dateLbl}</div>`:''}
   </div>`;
 }
-function mbrCol(arr,BH){
-  return`<div class="mob-col" style="height:${BH}px">${arr.map(m=>mbrCard(m,midxOf(m))).join('')}</div>`;
+function mbrCol(arr,BH,lbl=''){
+  const hdr=lbl?`<div style="position:absolute;top:0;left:0;right:0;font-family:'Press Start 2P',monospace;font-size:6px;color:#f6d45a;background:rgba(246,212,90,.12);border-bottom:1px solid rgba(246,212,90,.3);text-align:center;padding:2px 0;z-index:3">${lbl}</div>`:'';
+  return`<div class="mob-col" style="height:${BH}px;position:relative">${hdr}${arr.map(m=>mbrCard(m,midxOf(m))).join('')}</div>`;
 }
 function buildMobileBracket(gc,r32,r16,qf,sf,tp,fin){
   const BH=560;
   const lft=`<div class="mob-half" style="height:${BH}px">
-    ${mbrCol(r32.slice(0,8),BH)}${mbrCol(r16.slice(0,4),BH)}
-    ${mbrCol(qf.slice(0,2),BH)}${mbrCol(sf.slice(0,1),BH)}</div>`;
+    ${mbrCol(r32.slice(0,8),BH,'R32')}${mbrCol(r16.slice(0,4),BH,'R16')}
+    ${mbrCol(qf.slice(0,2),BH,'QF')}${mbrCol(sf.slice(0,1),BH,'SF')}</div>`;
   const ctr=`<div class="mob-center" style="height:${BH}px">
     <img src="trophy.png" style="width:44px;height:44px;image-rendering:pixelated;object-fit:contain" alt="trophy">${mbrCard(fin,fin?midxOf(fin):gc+31)}
     <div class="mob-fin-lbl">FINALE</div></div>`;
   const rgt=`<div class="mob-half" style="height:${BH}px">
-    ${mbrCol(sf.slice(1,2),BH)}${mbrCol(qf.slice(2,4),BH)}
-    ${mbrCol(r16.slice(4,8),BH)}${mbrCol(r32.slice(8,16),BH)}</div>`;
+    ${mbrCol(sf.slice(1,2),BH,'SF')}${mbrCol(qf.slice(2,4),BH,'QF')}
+    ${mbrCol(r16.slice(4,8),BH,'R16')}${mbrCol(r32.slice(8,16),BH,'R32')}</div>`;
   const brz=tp?`<div class="mob-bronze-hdr">🥉 BRONSEFINALE</div><div style="max-width:260px;margin:0 auto">${matchCardHtml(tp)}</div>`:'';
   return`<div class="mob-bracket-inner" id="mbInner" style="height:${BH}px">${lft}${ctr}${rgt}</div>${brz}`;
 }
