@@ -592,7 +592,7 @@
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
     &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
-    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.6</span>
+    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.7</span>
   </footer>
 </div>
 
@@ -1177,8 +1177,7 @@ function renderForside(){
     /* ── KO MODE: show current round grouped by date ── */
     const curRound=getCurrentKoRound();
     if(curRound){
-      let roundMs=notLive.filter(m=>m.round===curRound).sort(byTime);
-      if(forsideFilter==='kommende')roundMs=roundMs.filter(m=>!m.score?.ft);
+      const roundMs=notLive.filter(m=>m.round===curRound).sort(byTime);
       const byDate=new Map();
       roundMs.forEach(m=>{
         const cd=calDate(m);
@@ -1191,11 +1190,9 @@ function renderForside(){
         items.forEach(m=>datesHtml+=matchCardHtml(m));
         datesHtml+='</div>';
       });
-      if(!datesHtml)datesHtml=`<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen kommende kamper</p>`;
+      if(!datesHtml)datesHtml=`<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen kamper</p>`;
       const roundLbl=ROUND_NO[curRound]||curRound;
-      const fBtn=(val,lbl,cls)=>`<button class="fbtn${forsideFilter===val?' '+cls:''}" onclick="forsideFilter='${val}';renderForside()">${lbl}</button>`;
-      const filterHtml=`<div class="filter-row" style="margin-bottom:.4rem"><span class="flabel">Vis:</span>${fBtn('kommende','→ Kommende','fk')}${fBtn('alle','Alle','fa')}</div>`;
-      const koHtml=`<div style="margin-bottom:1rem"><div class="group-header">${roundLbl}</div>${filterHtml}${datesHtml}</div>`;
+      const koHtml=`<div style="margin-bottom:1rem"><div class="group-header">${roundLbl}</div>${datesHtml}</div>`;
       el.innerHTML=liveHtml+koHtml;
     }
     return;
