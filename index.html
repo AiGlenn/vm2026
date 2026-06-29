@@ -592,7 +592,7 @@
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
     &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
-    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.5</span>
+    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v1.6</span>
   </footer>
 </div>
 
@@ -871,7 +871,7 @@ function resolveGround(g){
 }
 
 /* ── STATE ── */
-let allMatches=[],liveMatches=[],liveInterval=null,currentView='forside',currentStatus='idag',currentGroup='alle',currentZoom='fire',currentModalIdx=-1;
+let allMatches=[],liveMatches=[],liveInterval=null,currentView='forside',currentStatus='idag',currentGroup='alle',currentZoom='fire',currentModalIdx=-1,forsideFilter='kommende';
 
 /* ── HELPERS ── */
 function tn(t){return TEAM_NO[t]||t||'?'}
@@ -1174,15 +1174,28 @@ function renderForside(){
   const notLive=allMatches.filter(m=>!liveIds.has(m._espnId));
 
   if(isKoMode()){
-    /* ── KO MODE: show current round ── */
+    /* ── KO MODE: show current round grouped by date ── */
     const curRound=getCurrentKoRound();
     if(curRound){
-      const roundMs=notLive.filter(m=>m.round===curRound).sort(byTime);
+      let roundMs=notLive.filter(m=>m.round===curRound).sort(byTime);
+      if(forsideFilter==='kommende')roundMs=roundMs.filter(m=>!m.score?.ft);
+      const byDate=new Map();
+      roundMs.forEach(m=>{
+        const cd=calDate(m);
+        const k=cd?cap(new Date(cd+'T12:00:00Z').toLocaleDateString('nb-NO',{weekday:'long',day:'numeric',month:'long',timeZone:'Europe/Oslo'})):(m.date||'?');
+        if(!byDate.has(k))byDate.set(k,[]);byDate.get(k).push(m);
+      });
+      let datesHtml='';
+      byDate.forEach((items,lbl)=>{
+        datesHtml+=`<div class="date-sec"><div class="group-header">${lbl}</div>`;
+        items.forEach(m=>datesHtml+=matchCardHtml(m));
+        datesHtml+='</div>';
+      });
+      if(!datesHtml)datesHtml=`<p style="padding:.5rem;color:rgba(244,236,200,.4);font-size:16px">Ingen kommende kamper</p>`;
       const roundLbl=ROUND_NO[curRound]||curRound;
-      const koHtml=`<div class="pixel-panel" style="margin-bottom:1rem">
-        <div class="group-header">${roundLbl}</div>
-        <div style="padding:.3rem .4rem .05rem">${roundMs.map(m=>matchCardHtml(m)).join('')}</div>
-      </div>`;
+      const fBtn=(val,lbl,cls)=>`<button class="fbtn${forsideFilter===val?' '+cls:''}" onclick="forsideFilter='${val}';renderForside()">${lbl}</button>`;
+      const filterHtml=`<div class="filter-row" style="margin-bottom:.4rem"><span class="flabel">Vis:</span>${fBtn('kommende','→ Kommende','fk')}${fBtn('alle','Alle','fa')}</div>`;
+      const koHtml=`<div style="margin-bottom:1rem"><div class="group-header">${roundLbl}</div>${filterHtml}${datesHtml}</div>`;
       el.innerHTML=liveHtml+koHtml;
     }
     return;
@@ -2281,7 +2294,7 @@ function applyScoreboardToMatches(events){
     const sc2=isPost||isIn?parseInt(away.score||'0'):null;
     if(isPost){
       m.status='FT';
-      if(sc1!==null&&!m.score?.ft)m.score={ft:[sc1,sc2]};
+      if(sc1!==null)m.score={ft:[sc1,sc2]};
     } else if(isIn){
       m.status=comp.status?.displayClock||'live';
       m.live_minute=comp.status?.displayClock?.replace("'",'');
