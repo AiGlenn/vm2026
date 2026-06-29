@@ -592,7 +592,7 @@
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
     &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
-    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v2.0</span>
+    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v2.1</span>
   </footer>
 </div>
 
@@ -646,7 +646,20 @@ async function fetchNRKHighlights(){
         map[k]={id:ep.prfId,img};
       }
     }
-    if(Object.keys(map).length){nrkExtra=map;cacheSet('nrk_hl_v4',map);}
+    if(Object.keys(map).length){
+      nrkExtra=map;cacheSet('nrk_hl_v4',map);
+      // If a finished match modal is open and has no NRK thumb yet, inject it now
+      if(currentModalIdx>=0){
+        const mm=allMatches[currentModalIdx];
+        if(mm?.score?.ft&&!isLive(mm)){
+          const nd=getNRKData(mm);
+          if(nd&&!document.querySelector('.nrk-thumb-wrap')){
+            const ss=document.getElementById('modal-stats-sect');
+            if(ss)ss.insertAdjacentHTML('afterend',`<div class="nrk-thumb-wrap"><a class="nrk-thumb" href="https://tv.nrk.no/program/${nd.id}" target="_blank" rel="noopener"><img src="${nd.img}" alt="Høydepunkter" loading="lazy"><div class="nrk-thumb-play"><div class="nrk-thumb-play-icon">▶</div></div></a><div class="nrk-thumb-lbl">HØYDEPUNKTER PÅ NRK</div></div>`);
+          }
+        }
+      }
+    }
   }catch{}
 }
 
