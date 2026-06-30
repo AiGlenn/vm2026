@@ -197,7 +197,7 @@
     /* Penalty shootout */
     .ms-ep{font-family:'Press Start 2P',monospace;font-size:9px;color:#e8be4a;text-align:center;margin-top:2px;opacity:.85}
     .modal-pen-score{font-family:'Press Start 2P',monospace;font-size:18px;color:#f6d45a;text-align:center;margin-top:4px;text-shadow:2px 2px 0 rgba(0,0,0,.6)}
-    .modal-pen-lbl{font-size:9px;color:rgba(244,236,200,.45);vertical-align:middle;margin-left:6px;letter-spacing:.05em}
+    .modal-pen-lbl{font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.38);text-align:center;margin-top:2px;letter-spacing:.1em;display:block}
     /* Winner pixel-art backgrounds */
     .ts.pen-win{background:repeating-linear-gradient(-45deg,rgba(246,212,90,.08) 0,rgba(246,212,90,.08) 2px,transparent 0,transparent 50%),linear-gradient(to right,rgba(246,212,90,.25) 0%,rgba(246,212,90,.06) 55%,transparent 100%);background-size:10px 10px,100%;border-left:3px solid rgba(246,212,90,.85);border-radius:3px 0 0 3px}
     .ts.r.pen-win{background:repeating-linear-gradient(45deg,rgba(246,212,90,.08) 0,rgba(246,212,90,.08) 2px,transparent 0,transparent 50%),linear-gradient(to left,rgba(246,212,90,.25) 0%,rgba(246,212,90,.06) 55%,transparent 100%);background-size:10px 10px,100%;border-right:3px solid rgba(246,212,90,.85);border-left:none;border-radius:0 3px 3px 0}
@@ -623,7 +623,7 @@
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
     &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
-    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v2.5</span>
+    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v2.6</span>
   </footer>
 </div>
 
@@ -1014,14 +1014,15 @@ function matchCardHtml(m,extraHtml=''){
   }else if(fin){
     const pen=m.score?.pen;
     const penW1=pen&&pen[0]>pen[1],penW2=pen&&pen[1]>pen[0];
+    const winW1=penW1||(sc[0]>sc[1]),winW2=penW2||(sc[1]>sc[0]);
     const penRow=pen?`<div class="ms-ep">${pen[0]}–${pen[1]}</div>`:'';
     ctr=`<div class="mc-time">${timeStr}</div><div class="ms">${sc[0]}&thinsp;–&thinsp;${sc[1]}</div>${penRow}<span class="mb b-fin">${pen?'Straffer':'Ferdig'}</span>`;
     const projStyle='opacity:.65';
     return`<div class="match-card${isN?' nc':''}${isKO?' kc':''}" data-midx="${idx}">
       ${lbl?`<div class="mc-grp">${lbl}</div>`:''}
-      <div class="ts${penW1?' pen-win':''}">${flagEl(t1d)}<span class="tn${t1d==='Norway'?' no':''}${penW1?' pw':''}"${isProj1?` style="${projStyle}"`:''}>${tn(t1d)}</span></div>
+      <div class="ts${winW1?' pen-win':''}">${flagEl(t1d)}<span class="tn${t1d==='Norway'?' no':''}${winW1?' pw':''}"${isProj1?` style="${projStyle}"`:''}>${tn(t1d)}</span></div>
       <div class="mc">${ctr}</div>
-      <div class="ts r${penW2?' pen-win':''}">${flagEl(t2d)}<span class="tn${t2d==='Norway'?' no':''}${penW2?' pw':''}"${isProj2?` style="${projStyle}"`:''}>${tn(t2d)}</span></div>
+      <div class="ts r${winW2?' pen-win':''}">${flagEl(t2d)}<span class="tn${t2d==='Norway'?' no':''}${winW2?' pw':''}"${isProj2?` style="${projStyle}"`:''}>${tn(t2d)}</span></div>
       ${extraHtml}
     </div>`;
   }else{
@@ -1204,7 +1205,7 @@ function openModal(idx){
   const scoreCenter=live
     ?`<div class="modal-ft">${sc?sc[0]:'–'} – ${sc?sc[1]:'–'}</div>${htHtml}${statusHtml}`
     :fin
-    ?`<div class="modal-ft">${sc[0]} – ${sc[1]}</div>${pen?`<div class="modal-pen-score">${pen[0]}–${pen[1]}<span class="modal-pen-lbl">straffer</span></div>`:''}${htHtml}${statusHtml}`
+    ?`<div class="modal-ft">${sc[0]} – ${sc[1]}</div>${pen?`<div class="modal-pen-score">${pen[0]}–${pen[1]}</div><div class="modal-pen-lbl">straffer</div>`:''}${htHtml}${statusHtml}`
     :`<div class="modal-vs">VS</div>${statusHtml}`;
 
   document.getElementById('modalContent').innerHTML=`
@@ -1214,13 +1215,13 @@ function openModal(idx){
       ${m.ground?`<div class="modal-venue">📍 ${resolveGround(m.ground)}<span id="modal-venue-spec"></span></div>`:''}
     </div>
     <div class="modal-score-area">
-      <div class="modal-team-col${w1?' win':''}${pen&&w1?' pen-win':''}">
+      <div class="modal-team-col${w1?' win':''}${w1?' pen-win':''}">
         ${flagEl(t1,'lg')}
         <span class="modal-tname${t1==='Norway'?' no':''}">${tn(t1)}</span>
         <button class="tropp-btn" data-team="${t1}">TROPP ▶</button>
       </div>
       <div class="modal-ctr-col">${scoreCenter}</div>
-      <div class="modal-team-col${w2?' win':''}${pen&&w2?' pen-win':''}">
+      <div class="modal-team-col${w2?' win':''}${w2?' pen-win':''}">
         ${flagEl(t2,'lg')}
         <span class="modal-tname${t2==='Norway'?' no':''}">${tn(t2)}</span>
         <button class="tropp-btn" data-team="${t2}">TROPP ▶</button>
