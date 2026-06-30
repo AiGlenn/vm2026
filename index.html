@@ -196,6 +196,22 @@
     .ev-min{font-family:'Press Start 2P',monospace;font-size:7px;color:rgba(244,236,200,.4);padding-left:.3rem}
     .ev-none{font-size:15px;color:rgba(244,236,200,.3);padding:.3rem 0}
 
+    /* Penalty shootout */
+    .ms-ep{font-family:'Press Start 2P',monospace;font-size:9px;color:#e8be4a;text-align:center;margin-top:2px;opacity:.85}
+    .modal-pen-score{font-family:'Press Start 2P',monospace;font-size:16px;color:#e8be4a;text-align:center;margin-top:4px;opacity:.85}
+    .modal-pen-lbl{font-size:9px;color:rgba(244,236,200,.5);vertical-align:middle;margin-left:5px}
+    .pen-kicks-wrap{margin-top:.8rem;border-top:1px solid rgba(232,190,74,.2);padding-top:.6rem}
+    .pen-kicks-hdr{font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.5);text-align:center;margin-bottom:.5rem;letter-spacing:.05em}
+    .pk-teams{display:grid;grid-template-columns:1fr 28px 1fr;margin-bottom:3px}
+    .pk-team-lbl{font-size:11px;font-weight:bold;color:rgba(244,236,200,.7)}
+    .pk-team-lbl.r{text-align:right}
+    .pk-row{display:grid;grid-template-columns:1fr 28px 1fr;align-items:center;padding:3px 0;border-bottom:1px solid rgba(244,236,200,.06)}
+    .pk-cell{display:flex;align-items:center;gap:4px;font-size:11px;color:rgba(244,236,200,.8)}
+    .pk-cell.r{justify-content:flex-end}
+    .pk-sep{font-family:'Press Start 2P',monospace;font-size:7px;color:rgba(244,236,200,.2);text-align:center}
+    .pk-icon{font-size:15px;line-height:1}
+    .pk-miss{color:#e05050;font-size:15px;font-weight:bold}
+    .br-pen{font-family:'Press Start 2P',monospace;font-size:7px;color:rgba(244,236,200,.45);text-align:center;padding:2px 0 0}
     .nrk-thumb-wrap{margin-top:.9rem;border-top:1px solid rgba(232,190,74,.2);padding-top:.7rem}
     .nrk-thumb{display:block;position:relative;cursor:pointer;text-decoration:none}
     .nrk-thumb img{width:100%;display:block;border:2px solid rgba(232,190,74,.25);image-rendering:auto}
@@ -592,7 +608,7 @@
     Data: <a href="https://www.espn.com" target="_blank">ESPN</a>
     &nbsp;·&nbsp;* Kamper 00–07 vises dagen før i kalender
     &nbsp;·&nbsp; Laget av Orion
-    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v2.2</span>
+    &nbsp;·&nbsp; <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(244,236,200,.3)">v2.3</span>
   </footer>
 </div>
 
@@ -981,7 +997,9 @@ function matchCardHtml(m,extraHtml=''){
   if(live){
     ctr=`<div class="mc-time">${timeStr}</div><div class="ms">${sc?sc[0]:'–'}&thinsp;–&thinsp;${sc?sc[1]:'–'}</div><span class="mb" style="background:rgba(200,0,0,.25);color:#f04040;border:1px solid #c03030"><span class="live-dot" style="width:6px;height:6px;display:inline-block;vertical-align:middle;margin-right:3px"></span>LIVE ${minStr}</span>`;
   }else if(fin){
-    ctr=`<div class="mc-time">${timeStr}</div><div class="ms">${sc[0]}&thinsp;–&thinsp;${sc[1]}</div><span class="mb b-fin">Ferdig</span>`;
+    const pen=m.score?.pen;
+    const penRow=pen?`<div class="ms-ep">${pen[0]}–${pen[1]}&thinsp;e.p.</div>`:'';
+    ctr=`<div class="mc-time">${timeStr}</div><div class="ms">${sc[0]}&thinsp;–&thinsp;${sc[1]}</div>${penRow}<span class="mb b-fin">${pen?'e.p.':'Ferdig'}</span>`;
   }else{
     ctr=`<div class="mt">${timeStr}</div><span class="mb ${tod?'b-idag':'b-kom'}">${tod?'I dag':'Kommende'}</span>`;
   }
@@ -1092,17 +1110,51 @@ function buildEventsHTML(m){
   return html+`</div>`;
 }
 
+/* ── Penalty kicks section ── */
+function buildKicksHTML(m){
+  const pen=m.score?.pen;
+  if(!pen)return'';
+  const [penH,penA]=pen;
+  const kicks=m.score?.kicks||[];
+  const t1=m.team1||'?',t2=m.team2||'?';
+  const hKicks=kicks.filter(k=>k.home);
+  const aKicks=kicks.filter(k=>!k.home);
+  const penW1=penH>penA;
+  // Winner takes exactly as many kicks as goals; loser takes one more (the miss)
+  const nH=penW1?penH:penH+1;
+  const nA=penW1?penA+1:penA;
+  const nRows=Math.max(nH,nA);
+  let rows='';
+  for(let i=0;i<nRows;i++){
+    const hk=hKicks[i],ak=aKicks[i];
+    const hShow=!!hk,hMiss=!hk&&i<nH;
+    const aShow=!!ak,aMiss=!ak&&i<nA;
+    rows+=`<div class="pk-row">
+      <div class="pk-cell">${hShow?`<span class="pk-name">${hk.player}</span><span class="pk-icon">⚽</span>`:hMiss?`<span class="pk-miss">✗</span>`:''}</div>
+      <div class="pk-sep">${i+1}</div>
+      <div class="pk-cell r">${aShow?`<span class="pk-icon">⚽</span><span class="pk-name">${ak.player}</span>`:aMiss?`<span class="pk-miss">✗</span>`:''}</div>
+    </div>`;
+  }
+  return`<div class="pen-kicks-wrap">
+    <div class="pen-kicks-hdr">⚽ STRAFFESPARK ⚽</div>
+    <div class="pk-teams"><span class="pk-team-lbl">${tn(t1)}</span><span></span><span class="pk-team-lbl r">${tn(t2)}</span></div>
+    ${rows}
+  </div>`;
+}
+
 /* ── Open modal ── */
 function openModal(idx){
   const m=allMatches[idx];if(!m)return;
   currentModalIdx=idx;
   const dt=parseDT(m.date,m.time);
-  const sc=m.score?.ft,ht=m.score?.ht;
+  const sc=m.score?.ft,ht=m.score?.ht,pen=m.score?.pen;
   const t1=m.team1||'?',t2=m.team2||'?';
   const live=isLive(m);
   const fin=!!sc&&!live,tod=!fin&&!live&&isMatchToday(m);
   const lbl=m.group?(GROUP_NO[m.group]||m.group):(ROUND_NO[m.round]||m.round||'');
-  const w1=sc&&sc[0]>sc[1],w2=sc&&sc[1]>sc[0];
+  const draw=sc&&sc[0]===sc[1];
+  const w1=(sc&&sc[0]>sc[1])||(pen&&draw&&pen[0]>pen[1]);
+  const w2=(sc&&sc[1]>sc[0])||(pen&&draw&&pen[1]>pen[0]);
   const evHtml=(fin||live)?buildEventsHTML(m):'';
   const htHtml=ht?`<div class="modal-ht">HT: ${ht[0]}–${ht[1]}</div>`:'';
   const minRaw=live?(m.live_minute||(m.status==='HT'?'HT':m.status)):null;
@@ -1115,7 +1167,7 @@ function openModal(idx){
   const scoreCenter=live
     ?`<div class="modal-ft">${sc?sc[0]:'–'} – ${sc?sc[1]:'–'}</div>${htHtml}${statusHtml}`
     :fin
-    ?`<div class="modal-ft">${sc[0]} – ${sc[1]}</div>${htHtml}${statusHtml}`
+    ?`<div class="modal-ft">${sc[0]} – ${sc[1]}</div>${pen?`<div class="modal-pen-score">${pen[0]}–${pen[1]}<span class="modal-pen-lbl">e.p.</span></div>`:''}${htHtml}${statusHtml}`
     :`<div class="modal-vs">VS</div>${statusHtml}`;
 
   document.getElementById('modalContent').innerHTML=`
@@ -1138,7 +1190,7 @@ function openModal(idx){
       </div>
     </div>
     ${evHtml}
-    ${fin?(()=>{const nd=getNRKData(m);return`<div id="modal-stats-sect"></div>`+(nd?`<div class="nrk-thumb-wrap"><a class="nrk-thumb" href="https://tv.nrk.no/program/${nd.id}" target="_blank" rel="noopener"><img src="${nd.img}" alt="Høydepunkter" loading="lazy"><div class="nrk-thumb-play"><div class="nrk-thumb-play-icon">▶</div></div></a><div class="nrk-thumb-lbl">HØYDEPUNKTER PÅ NRK</div></div>`:'')})():''}`;
+    ${fin?(()=>{const kHtml=buildKicksHTML(m);const nd=getNRKData(m);return kHtml+`<div id="modal-stats-sect"></div>`+(nd?`<div class="nrk-thumb-wrap"><a class="nrk-thumb" href="https://tv.nrk.no/program/${nd.id}" target="_blank" rel="noopener"><img src="${nd.img}" alt="Høydepunkter" loading="lazy"><div class="nrk-thumb-play"><div class="nrk-thumb-play-icon">▶</div></div></a><div class="nrk-thumb-lbl">HØYDEPUNKTER PÅ NRK</div></div>`:'')})():''}`;
 
   document.getElementById('matchModal').style.zIndex='510';
   document.getElementById('teamModal').style.zIndex='502';
@@ -1383,7 +1435,9 @@ function renderGrupper(){
 function mbrCard(m,idx){
   if(!m)return`<div id="mbr${idx}" class="mbr-ph"></div>`;
   const t1=m.team1||'?',t2=m.team2||'?',sc=m.score?.ft;
-  const w1=sc&&sc[0]>sc[1],w2=sc&&sc[1]>sc[0];
+  const mpen=m.score?.pen,mdraw=sc&&sc[0]===sc[1];
+  const w1=(sc&&sc[0]>sc[1])||(mpen&&mdraw&&mpen[0]>mpen[1]);
+  const w2=(sc&&sc[1]>sc[0])||(mpen&&mdraw&&mpen[1]>mpen[0]);
   function row(t,sv,win){
     const ph=isPH(t);
     const proj=ph?projectedKoTeam(t):null;
@@ -1398,8 +1452,9 @@ function mbrCard(m,idx){
   const isNo=t1==='Norway'||t2==='Norway'||projectedKoTeam(t1)==='Norway'||projectedKoTeam(t2)==='Norway';
   const NOM=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
   const dateLbl=m.date?(()=>{const[,mo,dy]=m.date.split('-');return`${parseInt(dy)}.${NOM[parseInt(mo)-1]}`})():'';
+  const mpenRow=mpen?`<div style="font-family:'Press Start 2P',monospace;font-size:6px;color:rgba(244,236,200,.4);text-align:center;padding:1px 0">${mpen[0]}–${mpen[1]} e.p.</div>`:'';
   return`<div class="mbr-card${isNo?' mbr-nor':''}" id="mbr${idx}" data-midx="${idx}">
-    ${row(t1,sc?sc[0]:'-',w1)}${row(t2,sc?sc[1]:'-',w2)}${dateLbl?`<div class="mbr-date">${dateLbl}</div>`:''}
+    ${row(t1,sc?sc[0]:'-',w1)}${row(t2,sc?sc[1]:'-',w2)}${mpenRow}${dateLbl?`<div class="mbr-date">${dateLbl}</div>`:''}
   </div>`;
 }
 function mbrCol(arr,BH,lbl=''){
@@ -1548,6 +1603,10 @@ function midxOf(m){return allMatches.findIndex(x=>x._espnId===m._espnId)}
 function brCard(m,idx){
   if(!m)return`<div class="br-card" id="bm${idx}" data-midx="${idx}"><div class="br-row"><span class="br-name dim">TBD</span></div><div class="br-row"><span class="br-name dim">TBD</span></div></div>`;
   const t1=m.team1||'?',t2=m.team2||'?',sc=m.score?.ft,dt=parseDT(m.date,m.time);
+  const pen=m.score?.pen;
+  const draw=sc&&sc[0]===sc[1];
+  const w1=(sc&&sc[0]>sc[1])||(pen&&draw&&pen[0]>pen[1]);
+  const w2=(sc&&sc[1]>sc[0])||(pen&&draw&&pen[1]>pen[0]);
   function row(t,score,win){
     const ph=isPH(t);
     const proj=ph?projectedKoTeam(t):null;
@@ -1560,10 +1619,11 @@ function brCard(m,idx){
     const cls=`br-name${disp==='Norway'?' no':''}${(ph&&!proj)?' dim':''}${proj&&!certain?' proj':''}`;
     return`<div class="br-row${win?' winner':''}">${fi}<span class="${cls}">${label}</span>${sc!==undefined?`<span class="br-score${win?' w':''}">${score}</span>`:''}</div>`;
   }
-  const w1=sc&&sc[0]>sc[1],w2=sc&&sc[1]>sc[0];
   const isNo=t1==='Norway'||t2==='Norway'||(projectedKoTeam(t1)==='Norway'||projectedKoTeam(t2)==='Norway');
+  const penRow=pen?`<div class="br-pen">${pen[0]}–${pen[1]}&thinsp;e.p.</div>`:'';
   return`<div class="br-card${isNo?' nc':''}" id="bm${idx}" data-midx="${idx}">
     ${row(t1,sc?sc[0]:'-',w1)}${row(t2,sc?sc[1]:'-',w2)}
+    ${penRow}
     <div class="br-meta">${dt?`${fmtShort(dt)} ${fmtTime(dt)}`:'TBD'}</div>
   </div>`;
 }
@@ -2317,6 +2377,21 @@ function applyScoreboardToMatches(events){
     if(isPost){
       m.status='FT';
       if(sc1!==null)m.score={ft:[sc1,sc2]};
+      const isPen=comp.status?.type?.name==='STATUS_FINAL_PEN';
+      if(isPen){
+        const penH=parseInt(home.shootoutScore||'0'),penA=parseInt(away.shootoutScore||'0');
+        if(!isNaN(penH)){
+          if(!m.score)m.score={ft:[sc1??0,sc2??0]};
+          m.score.pen=[penH,penA];
+          const hId=String(home.team?.id||'');
+          const kicks=(comp.details||[]).filter(d=>d.shootout).map(d=>({
+            home:String(d.team?.id||'')===hId,
+            player:d.athletesInvolved?.[0]?.shortName||'',
+            scored:!!d.scoringPlay
+          }));
+          if(kicks.length)m.score.kicks=kicks;
+        }
+      }
     } else if(isIn){
       m.status=comp.status?.displayClock||'live';
       m.live_minute=comp.status?.displayClock?.replace("'",'');
